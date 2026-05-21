@@ -15,7 +15,9 @@ services:
       retries: 5
 
   relay:
-    image: node:20-alpine
+    # AWS ECR public mirror of the Docker official node image, to avoid
+    # Docker Hub's anonymous pull rate limit on the cabinet.
+    image: public.ecr.aws/docker/library/node:20-alpine
     working_dir: /app
     volumes:
       - ../relay:/app:ro
