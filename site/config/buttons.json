@@ -1,0 +1,48 @@
+{
+  "_comment": "HETIC Pinball button map. Edit this file to remap controls. Each entry's `keys` are KeyboardEvent.code values: the game responds to ANY of them, so you can play on a plain keyboard now and add the ESP32 later. The ESP32 firmware reads `gpio` and emits `keys[0]` as a USB HID key. See firmware/README.md.",
+  "device": "esp32",
+  "poll_hz": 250,
+  "debounce_ms": 8,
+  "buttons": [
+    {
+      "id": "flipper-left",
+      "label": "Left flipper",
+      "action": "flipperLeft",
+      "gpio": 12,
+      "keys": ["ShiftLeft", "KeyA", "ArrowLeft"],
+      "active_low": true
+    },
+    {
+      "id": "flipper-right",
+      "label": "Right flipper",
+      "action": "flipperRight",
+      "gpio": 14,
+      "keys": ["ShiftRight", "KeyL", "ArrowRight"],
+      "active_low": true
+    },
+    {
+      "id": "plunger",
+      "label": "Plunger / launch ball",
+      "action": "plunger",
+      "gpio": 27,
+      "keys": ["Space"],
+      "active_low": true
+    },
+    {
+      "id": "start",
+      "label": "Start game",
+      "action": "start",
+      "gpio": 26,
+      "keys": ["Enter", "KeyS"],
+      "active_low": true
+    },
+    {
+      "id": "nudge",
+      "label": "Nudge table",
+      "action": "nudge",
+      "gpio": 25,
+      "keys": ["ArrowDown", "KeyN"],
+      "active_low": true
+    }
+  ]
+}

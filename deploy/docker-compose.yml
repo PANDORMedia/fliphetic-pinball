@@ -1,0 +1,12 @@
+# One nginx service serves the Three.js pinball game on the playfield screen.
+services:
+  game:
+    image: nginx:alpine
+    volumes:
+      - ../site:/usr/share/nginx/html:ro
+    ports: ["0:80"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 5s
+      timeout: 2s
+      retries: 5

@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>HETIC Pinball</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+  <link rel="stylesheet" href="style.css">
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./vendor/three.module.js"
+    }
+  }
+  </script>
+</head>
+<body>
+  <canvas id="view"></canvas>
+
+  <!-- top score strip -->
+  <div id="hud">
+    <div class="hud-row">
+      <span id="ball">HETIC PINBALL</span>
+      <span id="message"></span>
+    </div>
+    <div id="score">0</div>
+    <div id="hetic">
+      <span class="hetic-letter">H</span>
+      <span class="hetic-letter">E</span>
+      <span class="hetic-letter">T</span>
+      <span class="hetic-letter">I</span>
+      <span class="hetic-letter">C</span>
+    </div>
+  </div>
+
+  <!-- attract overlay -->
+  <div id="attract">
+    <div class="attract-box">
+      <div class="attract-title">HETIC<br>PINBALL</div>
+      <div class="attract-sub">MATRIX EDITION</div>
+      <div class="attract-press">PRESS START</div>
+      <div class="attract-controls">
+        <span>&#9665; &#9655; FLIPPERS</span>
+        <span>SPACE LAUNCH</span>
+        <span>ENTER START</span>
+      </div>
+      <div class="attract-demo">DEMO PLAYING &mdash; AUTO MODE</div>
+    </div>
+  </div>
+
+  <div id="scanlines"></div>
+
+  <script type="module" src="js/game.js"></script>
+</body>
+</html>
