@@ -1,7 +1,8 @@
 // backglass.js
-// Animated 3D backglass: an orbiting core, digital rain, a glowing HETIC
-// PINBALL wordmark, and the live score / HETIC progress polled from the
-// playfield.
+// Pure spectacle: an animated 3D Matrix backglass. Heavy green code rain, a
+// rotating wireframe core, the HETIC badge floating in front. No score here
+// (the DMD shows that) - this screen is just epic animation. It pulses when
+// the playfield scores, so it feels connected without showing numbers.
 
 import * as THREE from 'three';
 import { subscribe } from './net.js';
@@ -14,162 +15,121 @@ export function start() {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.25;
+  renderer.toneMappingExposure = 1.3;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x01040a);
-  scene.fog = new THREE.Fog(0x01040a, 34, 104);
+  scene.fog = new THREE.Fog(0x01040a, 40, 130);
 
-  const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 320);
+  const camera = new THREE.PerspectiveCamera(52, 1, 0.1, 360);
 
-  scene.add(new THREE.AmbientLight(0x244838, 0.85));
-  const lampA = new THREE.PointLight(0x6effa6, 1.1, 240);
-  lampA.position.set(0, 12, 34);
-  const lampB = new THREE.PointLight(0x39ffa0, 0.7, 200);
-  lampB.position.set(-18, -10, 24);
-  scene.add(lampA, lampB);
+  scene.add(new THREE.AmbientLight(0x224838, 0.7));
+  const lamp = new THREE.PointLight(0x6effa6, 1.2, 260);
+  lamp.position.set(0, 6, 40);
+  scene.add(lamp);
 
-  // --- orbiting core -------------------------------------------------------
-  const core = new THREE.Group();
-  core.position.set(0, 2, 0);
-  const sphere = new THREE.Mesh(
-    new THREE.SphereGeometry(5, 36, 26),
-    new THREE.MeshStandardMaterial({
-      color: 0xe6ffe9, emissive: 0x5dd86a, emissiveIntensity: 0.55,
-      metalness: 0.9, roughness: 0.12,
+  const texLoader = new THREE.TextureLoader();
+
+  // --- far backdrop: HETIC badge (bg.png) ---------------------------------
+  const backdrop = new THREE.Mesh(
+    new THREE.PlaneGeometry(170, 96),
+    new THREE.MeshBasicMaterial({
+      map: texLoader.load('assets/bg.png'), transparent: true, opacity: 0.32,
+      depthWrite: false,
     }),
   );
-  core.add(sphere);
-  const rings = [];
-  for (let i = 0; i < 3; i++) {
-    const ring = new THREE.Mesh(
-      new THREE.TorusGeometry(8 + i * 2.6, 0.34, 14, 90),
-      new THREE.MeshStandardMaterial({
-        color: 0x5dd86a, emissive: 0x5dd86a, emissiveIntensity: 1.7,
-      }),
-    );
-    ring.rotation.set(Math.random() * 3, Math.random() * 3, 0);
-    ring.userData.spin = new THREE.Vector3(
-      0.3 + Math.random() * 0.5,
-      0.3 + Math.random() * 0.5,
-      0.15 + Math.random() * 0.3,
-    );
-    core.add(ring);
-    rings.push(ring);
-  }
-  scene.add(core);
+  backdrop.position.set(0, 0, -46);
+  scene.add(backdrop);
 
-  // --- canvas-textured labels ---------------------------------------------
-  function makeLabel(worldW, worldH, draw) {
-    const c = document.createElement('canvas');
-    c.width = 1024;
-    c.height = Math.round(1024 * worldH / worldW);
-    const ctx = c.getContext('2d');
-    const tex = new THREE.CanvasTexture(c);
-    const mesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(worldW, worldH),
-      new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }),
-    );
-    function redraw(...args) {
-      ctx.clearRect(0, 0, c.width, c.height);
-      draw(ctx, c.width, c.height, ...args);
-      tex.needsUpdate = true;
+  // --- Matrix code rain (animated canvas texture) -------------------------
+  const rainCanvas = document.createElement('canvas');
+  rainCanvas.width = 1024;
+  rainCanvas.height = 576;
+  const rctx = rainCanvas.getContext('2d');
+  rctx.fillStyle = '#000';
+  rctx.fillRect(0, 0, 1024, 576);
+  const GLYPHS = 'HETICPINBALL0123456789アカサタナハ◆◇';
+  const COLW = 17;
+  const rainCols = new Array(Math.floor(1024 / COLW)).fill(0)
+    .map(() => Math.random() * -40);
+  const rainTex = new THREE.CanvasTexture(rainCanvas);
+  function drawRain(speed) {
+    rctx.fillStyle = 'rgba(1,6,3,0.18)';
+    rctx.fillRect(0, 0, 1024, 576);
+    rctx.font = '15px monospace';
+    for (let i = 0; i < rainCols.length; i++) {
+      const x = i * COLW;
+      const y = rainCols[i] * 18;
+      const ch = GLYPHS[(Math.random() * GLYPHS.length) | 0];
+      rctx.fillStyle = '#c8ffcf';
+      rctx.fillText(ch, x, y);
+      rctx.fillStyle = 'rgba(77,255,134,0.5)';
+      rctx.fillText(GLYPHS[(Math.random() * GLYPHS.length) | 0], x, y - 18);
+      if (y > 576 && Math.random() > 0.97) rainCols[i] = 0;
+      rainCols[i] += speed;
     }
-    return { mesh, redraw };
+    rainTex.needsUpdate = true;
   }
+  const rainPlane = new THREE.Mesh(
+    new THREE.PlaneGeometry(150, 86),
+    new THREE.MeshBasicMaterial({
+      map: rainTex, transparent: true, opacity: 0.85,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    }),
+  );
+  rainPlane.position.set(0, 0, -24);
+  scene.add(rainPlane);
 
-  const title = makeLabel(50, 16, (g, W, H) => {
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.shadowColor = '#5dd86a';
-    g.shadowBlur = 46;
-    g.fillStyle = '#c6ffc6';
-    g.font = `bold ${W * 0.2}px monospace`;
-    g.fillText('HETIC', W / 2, H * 0.34);
-    g.fillStyle = '#5dd86a';
-    g.fillText('PINBALL', W / 2, H * 0.74);
-  });
-  title.mesh.position.set(0, 17, -2);
-  title.redraw();
-  scene.add(title.mesh);
+  // --- wireframe core -----------------------------------------------------
+  const core = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(15, 1),
+    new THREE.MeshBasicMaterial({ color: 0x5dd86a, wireframe: true, transparent: true, opacity: 0.55 }),
+  );
+  core.position.set(0, 0, -6);
+  scene.add(core);
+  const coreInner = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(8, 0),
+    new THREE.MeshBasicMaterial({ color: 0x0c3a1c, wireframe: true, transparent: true, opacity: 0.5 }),
+  );
+  coreInner.position.copy(core.position);
+  scene.add(coreInner);
 
-  const scoreLabel = makeLabel(42, 11, (g, W, H, text) => {
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.shadowColor = '#5dd86a';
-    g.shadowBlur = 30;
-    g.fillStyle = '#1d6a2a';
-    g.font = `bold ${W * 0.07}px monospace`;
-    g.fillText('SCORE', W / 2, H * 0.2);
-    g.fillStyle = '#c6ffc6';
-    g.font = `bold ${W * 0.2}px monospace`;
-    g.fillText(text || '0', W / 2, H * 0.66);
-  });
-  scoreLabel.mesh.position.set(0, -12, 0);
-  scoreLabel.redraw('0');
-  scene.add(scoreLabel.mesh);
+  // --- HETIC badge (boot.png), floating in front --------------------------
+  const badge = new THREE.Mesh(
+    new THREE.PlaneGeometry(34, 34),
+    new THREE.MeshBasicMaterial({
+      map: texLoader.load('assets/boot.png'), transparent: true,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    }),
+  );
+  badge.position.set(0, 1, 9);
+  scene.add(badge);
 
-  const statusLabel = makeLabel(44, 7, (g, W, H, text) => {
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.shadowColor = '#5dd86a';
-    g.shadowBlur = 26;
-    g.fillStyle = '#9bffae';
-    g.font = `bold ${W * 0.085}px monospace`;
-    g.fillText(text || 'PRESS START', W / 2, H / 2);
-  });
-  statusLabel.mesh.position.set(0, -19.5, 0);
-  statusLabel.redraw('PRESS START');
-  scene.add(statusLabel.mesh);
-
-  // --- HETIC cubes ---------------------------------------------------------
-  const cubes = [];
-  ['H', 'E', 'T', 'I', 'C'].forEach((ch, i) => {
-    const c = document.createElement('canvas');
-    c.width = c.height = 128;
-    const g = c.getContext('2d');
-    g.fillStyle = '#02140a';
-    g.fillRect(0, 0, 128, 128);
-    g.fillStyle = '#c6ffc6';
-    g.font = 'bold 92px monospace';
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.fillText(ch, 64, 72);
-    const mat = new THREE.MeshStandardMaterial({
-      color: 0x0a2814, emissive: 0x5dd86a, emissiveIntensity: 0.25,
-      map: new THREE.CanvasTexture(c),
-    });
-    const cube = new THREE.Mesh(new THREE.BoxGeometry(4.4, 4.4, 4.4), mat);
-    cube.position.set((i - 2) * 6.4, -26, 0);
-    scene.add(cube);
-    cubes.push({ cube, mat });
-  });
-
-  // --- digital rain --------------------------------------------------------
-  const RAIN = 420;
-  const rainGeo = new THREE.BufferGeometry();
-  const rainPos = new Float32Array(RAIN * 3);
-  const rainSpd = new Float32Array(RAIN);
-  for (let i = 0; i < RAIN; i++) {
-    rainPos[i * 3] = (Math.random() - 0.5) * 130;
-    rainPos[i * 3 + 1] = (Math.random() - 0.5) * 90;
-    rainPos[i * 3 + 2] = -10 - Math.random() * 55;
-    rainSpd[i] = 8 + Math.random() * 26;
+  // --- drifting sparks ----------------------------------------------------
+  const SPARKS = 160;
+  const sparkGeo = new THREE.BufferGeometry();
+  const sparkPos = new Float32Array(SPARKS * 3);
+  for (let i = 0; i < SPARKS; i++) {
+    sparkPos[i * 3] = (Math.random() - 0.5) * 130;
+    sparkPos[i * 3 + 1] = (Math.random() - 0.5) * 80;
+    sparkPos[i * 3 + 2] = -20 + Math.random() * 40;
   }
-  rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
-  const rain = new THREE.Points(rainGeo, new THREE.PointsMaterial({
-    color: 0x4dff86, size: 0.7, transparent: true, opacity: 0.55, depthWrite: false,
+  sparkGeo.setAttribute('position', new THREE.BufferAttribute(sparkPos, 3));
+  const sparks = new THREE.Points(sparkGeo, new THREE.PointsMaterial({
+    color: 0x9effb0, size: 0.55, transparent: true, opacity: 0.7, depthWrite: false,
   }));
-  scene.add(rain);
+  scene.add(sparks);
 
-  // --- live state ----------------------------------------------------------
-  let snap = { mode: 'attract', score: 0, ball: 1, balls: 3, message: '', hetic: [] };
+  // --- live reaction (no numbers shown) -----------------------------------
+  let pulse = 0;
   let lastScore = -1;
-  let lastStatus = '';
-  subscribe((s) => { snap = s; });
+  let energetic = false;
+  subscribe((s) => {
+    if (lastScore >= 0 && (s.score || 0) > lastScore) pulse = 1;
+    lastScore = s.score || 0;
+    energetic = s.mode === 'playing';
+  });
 
-  // --- loop ----------------------------------------------------------------
-  let clock = 0;
   function resize() {
     const w = window.innerWidth;
     const h = window.innerHeight;
@@ -180,54 +140,45 @@ export function start() {
   window.addEventListener('resize', resize);
   resize();
 
+  let clock = 0;
   let last = performance.now();
   function frame(now) {
     const dt = Math.min((now - last) / 1000, 1 / 20);
     last = now;
     clock += dt;
+    pulse = Math.max(0, pulse - dt * 2);
 
-    sphere.rotation.y += dt * 0.6;
-    sphere.rotation.x += dt * 0.25;
-    for (const r of rings) {
-      r.rotation.x += r.userData.spin.x * dt;
-      r.rotation.y += r.userData.spin.y * dt;
-      r.rotation.z += r.userData.spin.z * dt;
-    }
-    title.mesh.position.y = 17 + Math.sin(clock * 1.1) * 0.6;
-    title.mesh.material.opacity = 0.82 + Math.sin(clock * 2.2) * 0.18;
+    drawRain(energetic ? 1.5 : 0.9);
 
-    cubes.forEach((c, i) => {
-      c.cube.rotation.y += dt * 0.7;
-      const lit = !!(snap.hetic && snap.hetic[i]);
-      c.mat.emissiveIntensity += ((lit ? 2.0 : 0.25) - c.mat.emissiveIntensity) * 0.15;
-    });
+    core.rotation.x += dt * 0.3;
+    core.rotation.y += dt * 0.42;
+    coreInner.rotation.x -= dt * 0.5;
+    coreInner.rotation.y -= dt * 0.62;
+    const coreScale = 1 + pulse * 0.18 + Math.sin(clock * 1.6) * 0.04;
+    core.scale.setScalar(coreScale);
+    core.material.opacity = 0.45 + pulse * 0.4 + Math.sin(clock * 2) * 0.1;
 
-    const p = rainGeo.attributes.position.array;
-    for (let i = 0; i < RAIN; i++) {
-      p[i * 3 + 1] -= rainSpd[i] * dt;
-      if (p[i * 3 + 1] < -48) p[i * 3 + 1] = 48;
-    }
-    rainGeo.attributes.position.needsUpdate = true;
+    badge.position.y = 1 + Math.sin(clock * 1.1) * 1.6;
+    badge.rotation.z = Math.sin(clock * 0.5) * 0.07;
+    badge.scale.setScalar(1 + pulse * 0.12 + Math.sin(clock * 2.4) * 0.02);
+    badge.material.opacity = 0.85 + pulse * 0.15;
 
-    if ((snap.score || 0) !== lastScore) {
-      lastScore = snap.score || 0;
-      scoreLabel.redraw(lastScore.toLocaleString('en-US'));
+    rainPlane.material.opacity = 0.7 + pulse * 0.25;
+
+    const p = sparkGeo.attributes.position.array;
+    for (let i = 0; i < SPARKS; i++) {
+      p[i * 3 + 1] += dt * (4 + (i % 5));
+      if (p[i * 3 + 1] > 42) p[i * 3 + 1] = -42;
     }
-    let status;
-    if (snap.mode === 'playing') status = snap.message || `BALL ${snap.ball || 1} / 3`;
-    else if (snap.mode === 'gameover') status = 'GAME OVER';
-    else status = 'PRESS START';
-    if (status !== lastStatus) {
-      lastStatus = status;
-      statusLabel.redraw(status);
-    }
+    sparkGeo.attributes.position.needsUpdate = true;
+    sparks.rotation.z = Math.sin(clock * 0.2) * 0.1;
 
     camera.position.set(
-      Math.sin(clock * 0.22) * 7,
-      2 + Math.sin(clock * 0.33) * 2.4,
-      48,
+      Math.sin(clock * 0.25) * 8,
+      Math.sin(clock * 0.34) * 4,
+      40 - pulse * 3,
     );
-    camera.lookAt(0, -3, 0);
+    camera.lookAt(0, 0, -6);
 
     renderer.render(scene, camera);
     requestAnimationFrame(frame);

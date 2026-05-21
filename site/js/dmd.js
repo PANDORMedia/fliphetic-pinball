@@ -41,11 +41,14 @@ export function start() {
     noiseEl.classList.add('burst');
   }
 
+  let lastTilt = false;
   subscribe((s) => {
     if ((s.score || 0) !== lastScore) {
       lastScore = s.score || 0;
       glitchScore();
     }
+    if (s.tilt && !lastTilt) { glitchScore(); glitchBurst(); }
+    lastTilt = !!s.tilt;
     snap = s;
   });
 
@@ -69,7 +72,10 @@ export function start() {
 
   function render() {
     scoreEl.textContent = (snap.score || 0).toLocaleString('en-US');
-    if (snap.mode === 'playing') {
+    if (snap.tilt) {
+      headL.textContent = 'T I L T';
+      setMarquee('◆ TILT ◆ TILT ◆ TILT ◆ EASY ON THE NUDGE ◆ ');
+    } else if (snap.mode === 'playing') {
       headL.textContent = `BALL ${snap.ball || 1} / ${snap.balls || 3}`;
       setMarquee(`◆ ${snap.message || 'SHOOT THE TARGETS'} ◆ ` +
         `SCORE ${(snap.score || 0).toLocaleString('en-US')} ◆ `);

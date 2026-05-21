@@ -1,7 +1,7 @@
 // game.js
 // HETIC Pinball playfield: top-down orthographic Three.js scene, game state
-// machine, attract-mode auto-play, variable plunger, sound, and live state
-// broadcast to the DMD and backglass screens.
+// machine, attract-mode auto-play, variable plunger, tilt, sound, screen
+// shake and hit FX, plus live state broadcast to the DMD and backglass.
 
 import * as THREE from 'three';
 import { World } from './physics.js';
@@ -15,12 +15,11 @@ export function start() {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.2;
+  renderer.toneMappingExposure = 1.22;
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x02070b);
 
-  // Orthographic, straight down -Z: a true top-down view, no perspective.
   const VIEW_HALF = 56;
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 900);
   camera.position.set(27, 52, 320);
@@ -53,12 +52,15 @@ export function start() {
   let mode = STATE.ATTRACT;
   let score = 0;
   let ballNum = 1;
-  let ballPhase = 'lane'; // lane | play | drain
+  let ballPhase = 'lane';
   let laneTimer = 0;
   let drainTimer = 0;
   let gameoverTimer = 0;
   let plungerCharge = 0;
   let stuckTimer = 0;
+  let shake = 0;
+  let tiltMeter = 0;
+  let tilted = false;
   const hetic = [false, false, false, false, false];
   const flipperWas = [false, false];
   let message = '';
@@ -77,12 +79,14 @@ export function start() {
     laneTimer = 0;
     plungerCharge = 0;
     stuckTimer = 0;
+    tiltMeter = 0;
+    tilted = false;
+    table.trailClear();
   }
 
   function launch(power) {
     if (ballPhase !== 'lane') return;
     world.ball.vel.x = (Math.random() * 2 - 1) * 3;
-    // 150 already clears the lane and the top arch with margin; power adds punch
     world.ball.vel.y = 150 + power * 44;
     ballPhase = 'play';
     audio.launch();
@@ -118,6 +122,13 @@ export function start() {
     setMessage('GAME OVER', 6.5);
   }
 
+  function doTilt() {
+    tilted = true;
+    setMessage('TILT', 5);
+    shake = 3.2;
+    audio.drain();
+  }
+
   const input = new Input();
   function wireInput() {
     const poke = () => {
@@ -130,20 +141,31 @@ export function start() {
     input.onPress('plunger', poke);
     input.onPress('nudge', () => {
       audio.unlock();
-      world.ball.vel.x += (Math.random() * 2 - 1) * 8;
-      world.ball.vel.y += 9;
+      world.ball.vel.x += (Math.random() * 2 - 1) * 10;
+      world.ball.vel.y += 11;
+      shake = Math.max(shake, 0.6);
+      if (mode === STATE.PLAYING && !tilted) {
+        tiltMeter += 0.34;
+        if (tiltMeter > 0.62 && tiltMeter < 1) setMessage('CAREFUL!', 1);
+      }
     });
   }
 
   function consumeEvents() {
+    const bx = world.ball.pos.x;
+    const by = world.ball.pos.y;
     for (const ev of world.events) {
       if (ev.type === 'bumper') {
         score += 750;
         ev.obj._pulse = 1;
         audio.bumper();
+        table.burst(bx, by, 14);
+        shake = Math.max(shake, 0.7);
       } else if (ev.type === 'slingshot') {
         score += 120;
         audio.slingshot();
+        table.burst(bx, by, 8);
+        shake = Math.max(shake, 0.4);
       } else if (ev.type === 'target') {
         const i = ev.obj.letterIndex;
         if (!hetic[i]) {
@@ -157,10 +179,14 @@ export function start() {
           score += 250;
           audio.target();
         }
+        table.burst(bx, by, 16);
+        shake = Math.max(shake, 0.6);
         if (hetic.every(Boolean)) {
           score += 25000;
           setMessage('HETIC COMPLETE  +25000', 3);
           audio.jackpot();
+          table.burst(26, 70, 60);
+          shake = 2.2;
           resetTargets();
         }
       }
@@ -185,6 +211,11 @@ export function start() {
   }
 
   function playingControl(dt) {
+    if (tilted) {
+      world.flippers[0].pressed = false;
+      world.flippers[1].pressed = false;
+      return;
+    }
     world.flippers[0].pressed = input.isHeld('flipperLeft');
     world.flippers[1].pressed = input.isHeld('flipperRight');
     if (ballPhase === 'lane') {
@@ -203,6 +234,7 @@ export function start() {
     table.ballGlow.visible = ballPhase !== 'drain';
     table.ballMesh.position.set(b.pos.x, b.pos.y, world.ball.radius);
     table.ballGlow.position.set(b.pos.x, b.pos.y, world.ball.radius + 2);
+    if (ballPhase !== 'drain') table.trailPush(b.pos.x, b.pos.y);
 
     for (const side of ['left', 'right']) {
       const fm = table.flipperMeshes[side];
@@ -218,7 +250,18 @@ export function start() {
     for (const tm of table.targetMeshes) {
       tm.mesh.material.emissiveIntensity = tm.lit ? 1.9 : 0.25;
     }
-    if (table.animate) table.animate(dt);
+    table.animate(dt);
+
+    // screen shake
+    shake = Math.max(0, shake - dt * 6);
+    if (shake > 0.01) {
+      table.group.position.set(
+        (Math.random() * 2 - 1) * shake,
+        (Math.random() * 2 - 1) * shake, 0,
+      );
+    } else {
+      table.group.position.set(0, 0, 0);
+    }
   }
 
   function updateHud(dt) {
@@ -243,7 +286,7 @@ export function start() {
     pushState({
       mode, score, ball: ballNum, balls: 3,
       message: messageTimer > 0 ? message : '',
-      hetic: hetic.slice(), ts: Date.now(),
+      hetic: hetic.slice(), tilt: tilted, ts: Date.now(),
     });
   }
 
@@ -258,13 +301,14 @@ export function start() {
       attractAI(dt);
     } else if (mode === STATE.PLAYING) {
       playingControl(dt);
+      tiltMeter = Math.max(0, tiltMeter - dt * 0.45);
+      if (tiltMeter >= 1 && !tilted && ballPhase === 'play') doTilt();
       if (input.idleMs() > 25000) enterAttract();
     } else {
       world.flippers[0].pressed = false;
       world.flippers[1].pressed = false;
     }
 
-    // flipper sound on the press edge (covers attract AI too)
     for (let i = 0; i < 2; i++) {
       const pressed = world.flippers[i].pressed;
       if (pressed && !flipperWas[i]) audio.flipper();
@@ -274,13 +318,11 @@ export function start() {
     for (let i = 0; i < SUBSTEPS; i++) world.step(dt / SUBSTEPS);
     consumeEvents();
 
-    // ball settled back in the shooter lane: allow a fresh plunge
     if (ballPhase === 'play' && world.ball.pos.x > 44.5 && world.ball.pos.y < 38) {
       const sp = Math.hypot(world.ball.vel.x, world.ball.vel.y);
       if (sp < 16) { ballPhase = 'lane'; plungerCharge = 0; }
     }
 
-    // stuck-ball watchdog: never leave the cabinet wedged
     if (ballPhase === 'play') {
       const sp = Math.hypot(world.ball.vel.x, world.ball.vel.y);
       stuckTimer = sp < 7 ? stuckTimer + dt : 0;
@@ -293,7 +335,8 @@ export function start() {
       world.ball.vel.x = 0;
       world.ball.vel.y = 0;
       audio.drain();
-      if (mode === STATE.PLAYING) setMessage('BALL LOST');
+      table.trailClear();
+      if (mode === STATE.PLAYING) setMessage(tilted ? 'TILT' : 'BALL LOST');
     }
 
     if (ballPhase === 'drain') {

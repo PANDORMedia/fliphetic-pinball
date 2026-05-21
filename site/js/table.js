@@ -66,6 +66,7 @@ function segmentMesh(a, b, color, emissiveIntensity, height) {
 export function createTable(world) {
   const group = new THREE.Group();
   const sharedGlow = glowTexture();
+  const texLoader = new THREE.TextureLoader();
 
   const meta = {
     drainY: 5,
@@ -270,35 +271,27 @@ export function createTable(world) {
     group.add(post);
   }
 
-  // --- playfield decal (visual) -------------------------------------------
+  // --- playfield decal: HETIC badge (boot.png) ----------------------------
   {
-    const c = document.createElement('canvas');
-    c.width = 512; c.height = 256;
-    const g = c.getContext('2d');
-    g.clearRect(0, 0, 512, 256);
-    g.fillStyle = 'rgba(93,216,106,0.16)';
-    g.font = 'bold 120px monospace';
-    g.textAlign = 'center';
-    g.textBaseline = 'middle';
-    g.fillText('HETIC', 256, 96);
-    g.font = 'bold 64px monospace';
-    g.fillText('PINBALL', 256, 188);
     const decal = new THREE.Mesh(
-      new THREE.PlaneGeometry(34, 17),
+      new THREE.PlaneGeometry(22, 22),
       new THREE.MeshBasicMaterial({
-        map: new THREE.CanvasTexture(c), transparent: true, opacity: 0.7,
+        map: texLoader.load('assets/boot.png'),
+        transparent: true, blending: THREE.AdditiveBlending,
+        depthWrite: false, opacity: 0.5,
       }),
     );
-    decal.position.set(23.5, 50, 0.12);
+    decal.position.set(23.5, 48, 0.14);
     group.add(decal);
   }
 
   // --- perimeter chase lights (visual, animated) --------------------------
   const chase = [];
   const ring = [];
-  for (let x = 8; x <= 46; x += 6) { ring.push({ x, y: 101 }); }
-  for (let y = 96; y >= 24; y -= 8) { ring.push({ x: 1.5, y }); }
-  for (let x = 8; x <= 40; x += 6) { ring.push({ x, y: 1.5 }); }
+  for (let x = 8; x <= 46; x += 5) { ring.push({ x, y: 101 }); }
+  for (let y = 96; y >= 24; y -= 7) { ring.push({ x: 1.5, y }); }
+  for (let y = 96; y >= 24; y -= 7) { ring.push({ x: 45.5, y }); }
+  for (let x = 8; x <= 40; x += 5) { ring.push({ x, y: 1.5 }); }
   ring.forEach((p) => {
     const dot = new THREE.Mesh(
       new THREE.SphereGeometry(0.9, 12, 10),
@@ -309,62 +302,115 @@ export function createTable(world) {
     chase.push(dot);
   });
 
-  // --- 3D side-art panels (fill a 16:9 screen) ----------------------------
-  const sideBars = [];
+  // --- side-art panels: the HETIC scene (scene.png) -----------------------
+  const sideScans = [];
   function sidePanel(cx) {
-    const panel = new THREE.Group();
-    const back = new THREE.Mesh(
-      new THREE.BoxGeometry(26, 104, 1.5),
-      new THREE.MeshStandardMaterial({
-        color: 0x04130a, emissive: GREEN, emissiveIntensity: 0.12, roughness: 0.9,
+    const panel = new THREE.Mesh(
+      new THREE.PlaneGeometry(44, 78),
+      new THREE.MeshBasicMaterial({ map: texLoader.load('assets/scene.png') }),
+    );
+    panel.position.set(cx, 52, -3);
+    group.add(panel);
+    for (const [a, b] of [
+      [{ x: cx - 22, y: 13 }, { x: cx - 22, y: 91 }],
+      [{ x: cx + 22, y: 13 }, { x: cx + 22, y: 91 }],
+      [{ x: cx - 22, y: 13 }, { x: cx + 22, y: 13 }],
+      [{ x: cx - 22, y: 91 }, { x: cx + 22, y: 91 }],
+    ]) group.add(segmentMesh(a, b, GREEN, 1.1, 2.6));
+    const scan = new THREE.Mesh(
+      new THREE.PlaneGeometry(44, 3),
+      new THREE.MeshBasicMaterial({
+        color: GREEN_BRIGHT, transparent: true, opacity: 0.32,
+        blending: THREE.AdditiveBlending, depthWrite: false,
       }),
     );
-    back.position.set(cx, 52, -1);
-    panel.add(back);
-    // emissive frame
-    for (const [a, b] of [
-      [{ x: cx - 12, y: 4 }, { x: cx - 12, y: 100 }],
-      [{ x: cx + 12, y: 4 }, { x: cx + 12, y: 100 }],
-      [{ x: cx - 12, y: 4 }, { x: cx + 12, y: 4 }],
-      [{ x: cx - 12, y: 100 }, { x: cx + 12, y: 100 }],
-    ]) {
-      panel.add(segmentMesh(a, b, GREEN, 0.8, 2));
-    }
-    // animated data bars
-    for (let i = 0; i < 5; i++) {
-      const bar = new THREE.Mesh(
-        new THREE.BoxGeometry(20, 2.4, 2),
-        new THREE.MeshStandardMaterial({
-          color: GREEN, emissive: GREEN, emissiveIntensity: 1.0,
-          transparent: true, opacity: 0.85,
-        }),
-      );
-      bar.position.set(cx, 16 + i * 17, 1.4);
-      panel.add(bar);
-      sideBars.push({ mesh: bar, phase: i * 0.7 });
-    }
-    group.add(panel);
+    scan.position.set(cx, 52, -1.5);
+    group.add(scan);
+    sideScans.push({ scan, cx });
   }
-  sidePanel(-16);
-  sidePanel(70);
+  sidePanel(-26);
+  sidePanel(80);
+
+  // --- FX: hit particles --------------------------------------------------
+  const particles = [];
+  for (let i = 0; i < 80; i++) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: sharedGlow, color: GREEN_BRIGHT, blending: THREE.AdditiveBlending,
+      transparent: true, depthWrite: false, opacity: 0,
+    }));
+    sp.visible = false;
+    group.add(sp);
+    particles.push({ sp, life: 0, max: 1, x: 0, y: 0, vx: 0, vy: 0 });
+  }
+  function burst(x, y, n = 14) {
+    let made = 0;
+    for (const p of particles) {
+      if (p.life > 0) continue;
+      const a = Math.random() * Math.PI * 2;
+      const s = 14 + Math.random() * 30;
+      p.x = x; p.y = y;
+      p.vx = Math.cos(a) * s; p.vy = Math.sin(a) * s;
+      p.life = p.max = 0.45 + Math.random() * 0.35;
+      if (++made >= n) break;
+    }
+  }
+
+  // --- FX: ball trail -----------------------------------------------------
+  const TRAIL = 18;
+  const trail = [];
+  for (let i = 0; i < TRAIL; i++) {
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: sharedGlow, color: GREEN_BRIGHT, blending: THREE.AdditiveBlending,
+      transparent: true, depthWrite: false, opacity: 0,
+    }));
+    group.add(sp);
+    trail.push(sp);
+  }
+  const trailHist = [];
+  function trailPush(x, y) {
+    trailHist.unshift({ x, y });
+    if (trailHist.length > TRAIL) trailHist.pop();
+    for (let i = 0; i < TRAIL; i++) {
+      const h = trailHist[i];
+      if (!h) { trail[i].material.opacity = 0; continue; }
+      const f = 1 - i / TRAIL;
+      trail[i].position.set(h.x, h.y, 1.0);
+      trail[i].material.opacity = f * 0.55;
+      trail[i].scale.setScalar(2 + f * 5);
+    }
+  }
+  function trailClear() {
+    trailHist.length = 0;
+    for (const t of trail) t.material.opacity = 0;
+  }
 
   // --- decorative animation ------------------------------------------------
   let clock = 0;
   function animate(dt) {
     clock += dt;
     chase.forEach((dot, i) => {
-      const lit = (Math.sin(clock * 3 - i * 0.5) + 1) / 2;
-      dot.material.emissiveIntensity = 0.25 + lit * 1.8;
+      const lit = (Math.sin(clock * 3.4 - i * 0.45) + 1) / 2;
+      dot.material.emissiveIntensity = 0.2 + lit * 2.1;
     });
-    for (const b of sideBars) {
-      const k = (Math.sin(clock * 1.6 + b.phase) + 1) / 2;
-      b.mesh.material.emissiveIntensity = 0.3 + k * 1.7;
-      b.mesh.material.opacity = 0.4 + k * 0.55;
+    grid.material.opacity = 0.32 + (Math.sin(clock * 1.4) + 1) / 2 * 0.28;
+    for (const s of sideScans) {
+      s.scan.position.y = 13 + ((clock * 24 + s.cx + 1000) % 78);
+    }
+    for (const p of particles) {
+      if (p.life <= 0) continue;
+      p.life -= dt;
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vx *= 0.9; p.vy *= 0.9;
+      const f = Math.max(0, p.life / p.max);
+      p.sp.visible = p.life > 0;
+      p.sp.position.set(p.x, p.y, 1.3);
+      p.sp.material.opacity = f * 0.95;
+      p.sp.scale.setScalar(1.6 + (1 - f) * 7);
     }
   }
 
   return {
     group, meta, flipperMeshes, bumperMeshes, targetMeshes,
-    ballMesh, ballGlow, animate,
+    ballMesh, ballGlow, animate, burst, trailPush, trailClear,
   };
 }
