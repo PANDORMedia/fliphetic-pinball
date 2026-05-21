@@ -242,6 +242,48 @@ body[data-screen="backglass"] #backglass-screen { display: block; }
 
 /* ===================== shared =========================================== */
 
+/* ===================== HETIC MODE (golden X3) =========================== */
+
+body { transition: filter 0.55s ease; }
+body.golden { filter: hue-rotate(-90deg) saturate(1.45) brightness(1.12); }
+
+#mult {
+  font-family: "Press Start 2P", monospace;
+  font-size: clamp(13px, 2.5vh, 28px);
+  color: var(--green-bright); text-shadow: 0 0 2vh var(--green);
+  min-height: 3vh;
+}
+
+#hetic-mode {
+  position: fixed; inset: 0; z-index: 9; pointer-events: none;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2.2vh;
+  opacity: 0; text-align: center;
+}
+#hetic-mode.show { animation: heticPunch 3s ease-out 1; }
+@keyframes heticPunch {
+  0%   { opacity: 0; transform: scale(0.2) rotate(-8deg); }
+  10%  { opacity: 1; transform: scale(1.18) rotate(3deg); }
+  18%  { transform: scale(1) rotate(0deg); }
+  82%  { opacity: 1; transform: scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+.hm-1 {
+  font-family: "Press Start 2P", monospace;
+  font-size: clamp(30px, 8vh, 104px); color: #fff;
+  text-shadow: 0 0 3vh var(--green-bright), 0 0 8vh var(--green);
+}
+.hm-2 {
+  font-family: "Press Start 2P", monospace;
+  font-size: clamp(15px, 3.2vh, 42px); color: var(--green-bright);
+  letter-spacing: 0.2em;
+}
+.hm-3 {
+  font-family: "Press Start 2P", monospace;
+  font-size: clamp(28px, 6.6vh, 84px); color: var(--green-bright);
+  text-shadow: 0 0 3vh var(--green);
+}
+
 #scanlines {
   position: fixed; inset: 0; z-index: 8; pointer-events: none;
   background: repeating-linear-gradient(0deg,

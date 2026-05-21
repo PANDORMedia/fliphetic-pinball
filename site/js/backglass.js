@@ -213,6 +213,7 @@ export function start() {
 
   subscribe((s) => {
     energetic = s.mode === 'playing';
+    document.body.classList.toggle('golden', s.mult === 3);
     if (s.mode !== lastMode) {
       if (s.mode === 'playing') showCallout('GAME ON', true);
       else if (s.mode === 'gameover') showCallout('GAME OVER', true);

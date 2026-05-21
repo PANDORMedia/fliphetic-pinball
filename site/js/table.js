@@ -328,8 +328,8 @@ export function createTable(world) {
     group.add(scan);
     sideScans.push({ scan, cx });
   }
-  sidePanel(-26);
-  sidePanel(80);
+  sidePanel(-29);
+  sidePanel(77);
 
   // --- FX: hit particles --------------------------------------------------
   const particles = [];

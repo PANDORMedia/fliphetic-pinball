@@ -22,10 +22,11 @@ export function start() {
   scene.background = new THREE.Color(0x02070b);
 
   const VIEW_HALF = 56;
+  // centred on x=24, the midpoint of the flippers / drain
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 900);
-  camera.position.set(27, 52, 320);
+  camera.position.set(24, 52, 320);
   camera.up.set(0, 1, 0);
-  camera.lookAt(27, 52, 0);
+  camera.lookAt(24, 52, 0);
 
   scene.add(new THREE.AmbientLight(0x33564a, 0.95));
   const dir = new THREE.DirectionalLight(0x9effc4, 0.85);
@@ -45,6 +46,8 @@ export function start() {
     message: document.getElementById('message'),
     attract: document.getElementById('attract'),
     plunger: document.getElementById('plunger-fill'),
+    mult: document.getElementById('mult'),
+    heticMode: document.getElementById('hetic-mode'),
     hetic: Array.from(document.querySelectorAll('#playfield-screen .hetic-letter')),
   };
 
@@ -57,8 +60,11 @@ export function start() {
   let drainTimer = 0;
   let gameoverTimer = 0;
   let plungerCharge = 0;
-  let stuckTimer = 0;
+  let stuckRefX = 48;
+  let stuckRefY = 11;
+  let stuckRefTime = 0;
   let stuckNudges = 0;
+  let tiltTimer = 0;
   let ambientTimer = 0;
   let shake = 0;
   let tiltMeter = 0;
@@ -67,6 +73,8 @@ export function start() {
   const flipperWas = [false, false];
   let message = '';
   let messageTimer = 0;
+  let multiplier = 1;   // 1, or 3 during HETIC MODE
+  let multTimer = 0;    // seconds left of X3
 
   const pushState = publisher();
 
@@ -75,14 +83,21 @@ export function start() {
     messageTimer = secs;
   }
 
+  function addScore(n) {
+    score += Math.round(n * multiplier);
+  }
+
   function spawnBall() {
     world.resetBall(table.meta.ballStart);
     ballPhase = 'lane';
     laneTimer = 0;
     plungerCharge = 0;
-    stuckTimer = 0;
+    stuckRefX = table.meta.ballStart.x;
+    stuckRefY = table.meta.ballStart.y;
+    stuckRefTime = 0;
     stuckNudges = 0;
     tiltMeter = 0;
+    tiltTimer = 0;
     tilted = false;
     table.trailClear();
   }
@@ -105,6 +120,8 @@ export function start() {
     mode = STATE.PLAYING;
     score = 0;
     ballNum = 1;
+    multiplier = 1;
+    multTimer = 0;
     resetTargets();
     spawnBall();
     setMessage('BALL 1');
@@ -115,6 +132,8 @@ export function start() {
     mode = STATE.ATTRACT;
     score = 0;
     ballNum = 1;
+    multiplier = 1;
+    multTimer = 0;
     resetTargets();
     spawnBall();
     message = '';
@@ -123,6 +142,8 @@ export function start() {
   function gameOver() {
     mode = STATE.GAMEOVER;
     gameoverTimer = 6.5;
+    multiplier = 1;
+    multTimer = 0;
     setMessage('GAME OVER', 6.5);
   }
 
@@ -164,13 +185,13 @@ export function start() {
       if (ev.type === 'flipper') {
         table.burst(ev.x, ev.y, 8);
       } else if (ev.type === 'bumper') {
-        score += 750;
+        addScore(750);
         ev.obj._pulse = 1;
         audio.bumper();
         table.burst(bx, by, 26);
         shake = Math.max(shake, 0.8);
       } else if (ev.type === 'slingshot') {
-        score += 120;
+        addScore(120);
         audio.slingshot();
         table.burst(bx, by, 14);
         shake = Math.max(shake, 0.45);
@@ -178,25 +199,33 @@ export function start() {
         const i = ev.obj.letterIndex;
         if (!hetic[i]) {
           hetic[i] = true;
-          score += 1500;
+          addScore(1500);
           setMessage(ev.obj.letter);
           audio.target();
           const tm = table.targetMeshes[i];
           if (tm) tm.lit = true;
         } else {
-          score += 250;
+          addScore(250);
           audio.target();
         }
         table.burst(bx, by, 28);
         shake = Math.max(shake, 0.6);
         if (hetic.every(Boolean)) {
-          score += 25000;
-          setMessage('HETIC COMPLETE  +25000', 3);
+          addScore(25000);          // x3 too if re-completed mid-mode
+          multiplier = 3;
+          multTimer = 30;
+          setMessage('HETIC MODE  X3', 3.5);
           audio.jackpot();
-          for (let k = 0; k < 6; k++) {
-            table.burst(8 + Math.random() * 32, 44 + Math.random() * 46, 30);
+          shake = 3.4;
+          for (let k = 0; k < 12; k++) {
+            table.burst(6 + Math.random() * 36, 28 + Math.random() * 64, 34);
           }
-          shake = 2.4;
+          const hm = el.heticMode;
+          if (hm) {
+            hm.classList.remove('show');
+            void hm.offsetWidth;
+            hm.classList.add('show');
+          }
           resetTargets();
         }
       }
@@ -284,6 +313,11 @@ export function start() {
       el.message.style.opacity = '0';
     }
     el.attract.style.display = mode === STATE.ATTRACT ? 'flex' : 'none';
+    const golden = multiplier === 3;
+    document.body.classList.toggle('golden', golden);
+    if (el.mult) {
+      el.mult.textContent = golden ? `X3  ${Math.ceil(multTimer)}S` : '';
+    }
     if (el.plunger) {
       el.plunger.style.height = (plungerCharge * 100).toFixed(0) + '%';
       el.plunger.parentElement.style.opacity = ballPhase === 'lane' ? '1' : '0.25';
@@ -295,7 +329,9 @@ export function start() {
     pushState({
       mode, score, ball: ballNum, balls: 3,
       message: messageTimer > 0 ? message : '',
-      hetic: hetic.slice(), tilt: tilted, ts: Date.now(),
+      hetic: hetic.slice(), tilt: tilted,
+      mult: multiplier, multTime: Math.ceil(multTimer),
+      ts: Date.now(),
     });
   }
 
@@ -333,26 +369,55 @@ export function start() {
     for (let i = 0; i < SUBSTEPS; i++) world.step(dt / SUBSTEPS);
     consumeEvents();
 
+    if (multTimer > 0) {
+      multTimer -= dt;
+      if (multTimer <= 0) {
+        multTimer = 0;
+        multiplier = 1;
+        setMessage('X3 ENDED', 2);
+      }
+    }
+
     if (ballPhase === 'play' && world.ball.pos.x > 44.5 && world.ball.pos.y < 38) {
       const sp = Math.hypot(world.ball.vel.x, world.ball.vel.y);
       if (sp < 16) { ballPhase = 'lane'; plungerCharge = 0; }
     }
 
-    // stuck-ball recovery: nudge a wedged ball loose, respawn only if that fails
+    // stuck-ball recovery: position-based, so it also catches a ball
+    // rattling in place (not just a motionless one). If the ball stays
+    // within 9 units of a reference point too long, nudge it loose; if
+    // nudges fail, respawn.
     if (ballPhase === 'play') {
-      const sp = Math.hypot(world.ball.vel.x, world.ball.vel.y);
-      if (sp < 9) {
-        stuckTimer += dt;
-        if (stuckTimer > 2.2) {
-          world.ball.vel.x += (world.ball.pos.x < 23 ? 1 : -1) * 20;
-          world.ball.vel.y -= 22;
-          stuckTimer = 0;
-          stuckNudges += 1;
-          if (stuckNudges > 3) spawnBall();
-        }
-      } else {
-        stuckTimer = 0;
+      const b = world.ball.pos;
+      if (Math.hypot(b.x - stuckRefX, b.y - stuckRefY) > 9) {
+        stuckRefX = b.x;
+        stuckRefY = b.y;
+        stuckRefTime = 0;
         stuckNudges = 0;
+      } else {
+        stuckRefTime += dt;
+        if (stuckRefTime > 3.2) {
+          if (stuckNudges < 2) {
+            world.ball.vel.x += (b.x < 23 ? 1 : -1) * 26;
+            world.ball.vel.y -= 28;
+            stuckNudges += 1;
+            stuckRefTime = 1.0;
+          } else {
+            spawnBall();
+          }
+        }
+      }
+    }
+
+    // tilt always ends the ball: force a drain if it has not already
+    if (tilted && ballPhase === 'play') {
+      tiltTimer += dt;
+      if (tiltTimer > 2.6) {
+        ballPhase = 'drain';
+        drainTimer = 1.0;
+        world.ball.vel.x = 0;
+        world.ball.vel.y = 0;
+        audio.drain();
       }
     }
 

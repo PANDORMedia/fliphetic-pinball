@@ -24,6 +24,7 @@ export function start() {
 
   const scoreEl = document.getElementById('dmd-score');
   const headL = document.getElementById('dmd-head-l');
+  const headR = document.getElementById('dmd-head-r');
   const noiseEl = document.getElementById('dmd-noise');
   const marqueeEl = document.getElementById('dmd-marquee');
   const fxEl = document.getElementById('dmd-fx');
@@ -180,6 +181,11 @@ export function start() {
 
   function render() {
     scoreEl.textContent = (snap.score || 0).toLocaleString('en-US');
+    const golden = snap.mult === 3;
+    document.body.classList.toggle('golden', golden);
+    headR.textContent = golden
+      ? `X3 ◆ ${snap.multTime || 0}S`
+      : '◆ ◆ ◆';
     if (snap.tilt) {
       headL.textContent = 'T I L T';
       setMarquee('◆ TILT ◆ TILT ◆ TILT ◆ EASY ON THE NUDGE ◆ ');
