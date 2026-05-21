@@ -1,16 +1,16 @@
 // game.js
 // HETIC Pinball playfield: top-down orthographic Three.js scene, game state
-// machine, attract-mode auto-play, variable plunger, and live state broadcast
-// to the DMD and backglass screens.
+// machine, attract-mode auto-play, variable plunger, sound, and live state
+// broadcast to the DMD and backglass screens.
 
 import * as THREE from 'three';
 import { World } from './physics.js';
 import { createTable } from './table.js';
 import { Input } from './input.js';
 import { publisher } from './net.js';
+import { audio } from './audio.js';
 
 export function start() {
-  // --- renderer / scene / camera -------------------------------------------
   const canvas = document.getElementById('view');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -20,7 +20,7 @@ export function start() {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x02070b);
 
-  // Orthographic, looking straight down -Z: a true top-down view, no perspective.
+  // Orthographic, straight down -Z: a true top-down view, no perspective.
   const VIEW_HALF = 56;
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 900);
   camera.position.set(27, 52, 320);
@@ -31,17 +31,15 @@ export function start() {
   const dir = new THREE.DirectionalLight(0x9effc4, 0.85);
   dir.position.set(10, 30, 160);
   scene.add(dir);
-  const lamp = new THREE.PointLight(0x6effa6, 0.6, 320);
-  lamp.position.set(27, 58, 80);
+  const lamp = new THREE.PointLight(0x6effa6, 0.6, 360);
+  lamp.position.set(27, 58, 90);
   scene.add(lamp);
 
-  // --- world + table -------------------------------------------------------
   const world = new World();
   const table = createTable(world);
   scene.add(table.group);
   world.resetBall(table.meta.ballStart);
 
-  // --- DOM overlay ---------------------------------------------------------
   const el = {
     score: document.getElementById('score'),
     ball: document.getElementById('ball'),
@@ -51,7 +49,6 @@ export function start() {
     hetic: Array.from(document.querySelectorAll('#playfield-screen .hetic-letter')),
   };
 
-  // --- game state ----------------------------------------------------------
   const STATE = { ATTRACT: 'attract', PLAYING: 'playing', GAMEOVER: 'gameover' };
   let mode = STATE.ATTRACT;
   let score = 0;
@@ -61,7 +58,9 @@ export function start() {
   let drainTimer = 0;
   let gameoverTimer = 0;
   let plungerCharge = 0;
+  let stuckTimer = 0;
   const hetic = [false, false, false, false, false];
+  const flipperWas = [false, false];
   let message = '';
   let messageTimer = 0;
 
@@ -77,13 +76,16 @@ export function start() {
     ballPhase = 'lane';
     laneTimer = 0;
     plungerCharge = 0;
+    stuckTimer = 0;
   }
 
   function launch(power) {
     if (ballPhase !== 'lane') return;
-    world.ball.vel.x = (Math.random() * 2 - 1) * 4;
-    world.ball.vel.y = 124 + power * 42; // weak plunge still clears the lane
+    world.ball.vel.x = (Math.random() * 2 - 1) * 3;
+    // 150 already clears the lane and the top arch with margin; power adds punch
+    world.ball.vel.y = 150 + power * 44;
     ballPhase = 'play';
+    audio.launch();
   }
 
   function resetTargets() {
@@ -98,6 +100,7 @@ export function start() {
     resetTargets();
     spawnBall();
     setMessage('BALL 1');
+    audio.start();
   }
 
   function enterAttract() {
@@ -115,10 +118,10 @@ export function start() {
     setMessage('GAME OVER', 6.5);
   }
 
-  // --- input ---------------------------------------------------------------
   const input = new Input();
   function wireInput() {
     const poke = () => {
+      audio.unlock();
       if (mode === STATE.ATTRACT) startGame();
     };
     input.onPress('start', poke);
@@ -126,33 +129,38 @@ export function start() {
     input.onPress('flipperRight', poke);
     input.onPress('plunger', poke);
     input.onPress('nudge', () => {
+      audio.unlock();
       world.ball.vel.x += (Math.random() * 2 - 1) * 8;
       world.ball.vel.y += 9;
     });
   }
 
-  // --- scoring -------------------------------------------------------------
   function consumeEvents() {
     for (const ev of world.events) {
       if (ev.type === 'bumper') {
         score += 750;
         ev.obj._pulse = 1;
+        audio.bumper();
       } else if (ev.type === 'slingshot') {
         score += 120;
+        audio.slingshot();
       } else if (ev.type === 'target') {
         const i = ev.obj.letterIndex;
         if (!hetic[i]) {
           hetic[i] = true;
           score += 1500;
           setMessage('HETIC ' + ev.obj.letter);
+          audio.target();
           const tm = table.targetMeshes[i];
           if (tm) tm.lit = true;
         } else {
           score += 250;
+          audio.target();
         }
         if (hetic.every(Boolean)) {
           score += 25000;
           setMessage('HETIC COMPLETE  +25000', 3);
+          audio.jackpot();
           resetTargets();
         }
       }
@@ -160,14 +168,13 @@ export function start() {
     world.events.length = 0;
   }
 
-  // --- control -------------------------------------------------------------
   function attractAI(dt) {
     if (ballPhase === 'lane') {
       laneTimer += dt;
       plungerCharge = Math.min(1, laneTimer / 1.3);
       world.flippers[0].pressed = false;
       world.flippers[1].pressed = false;
-      if (laneTimer > 1.3) launch(0.65 + Math.random() * 0.35);
+      if (laneTimer > 1.3) launch(0.6 + Math.random() * 0.4);
       return;
     }
     const b = world.ball;
@@ -190,7 +197,6 @@ export function start() {
     }
   }
 
-  // --- visuals -------------------------------------------------------------
   function updateVisuals(dt) {
     const b = world.ball;
     table.ballMesh.visible = ballPhase !== 'drain';
@@ -203,17 +209,16 @@ export function start() {
       fm.group.rotation.z = fm.flipper.angle;
       fm.mat.emissiveIntensity = fm.flipper.pressed ? 2.3 : 1.0;
     }
-
     for (const bm of table.bumperMeshes) {
       const pulse = bm.circle._pulse || 0;
       bm.mesh.material.emissiveIntensity = 1.0 + pulse * 2.4;
       bm.cap.scale.setScalar(1 + pulse * 0.2);
       if (pulse > 0) bm.circle._pulse = Math.max(0, pulse - dt * 3.2);
     }
-
     for (const tm of table.targetMeshes) {
       tm.mesh.material.emissiveIntensity = tm.lit ? 1.9 : 0.25;
     }
+    if (table.animate) table.animate(dt);
   }
 
   function updateHud(dt) {
@@ -228,26 +233,21 @@ export function start() {
     }
     el.attract.style.display = mode === STATE.ATTRACT ? 'flex' : 'none';
     if (el.plunger) {
-      el.plunger.style.width = (plungerCharge * 100).toFixed(0) + '%';
-      el.plunger.parentElement.style.opacity = ballPhase === 'lane' ? '1' : '0';
+      el.plunger.style.height = (plungerCharge * 100).toFixed(0) + '%';
+      el.plunger.parentElement.style.opacity = ballPhase === 'lane' ? '1' : '0.25';
     }
     el.hetic.forEach((node, i) => node.classList.toggle('lit', hetic[i]));
   }
 
   function broadcast() {
     pushState({
-      mode,
-      score,
-      ball: ballNum,
-      balls: 3,
+      mode, score, ball: ballNum, balls: 3,
       message: messageTimer > 0 ? message : '',
-      hetic: hetic.slice(),
-      ts: Date.now(),
+      hetic: hetic.slice(), ts: Date.now(),
     });
   }
 
-  // --- main loop -----------------------------------------------------------
-  const SUBSTEPS = 7;
+  const SUBSTEPS = 8;
   let last = performance.now();
 
   function frame(now) {
@@ -264,14 +264,35 @@ export function start() {
       world.flippers[1].pressed = false;
     }
 
+    // flipper sound on the press edge (covers attract AI too)
+    for (let i = 0; i < 2; i++) {
+      const pressed = world.flippers[i].pressed;
+      if (pressed && !flipperWas[i]) audio.flipper();
+      flipperWas[i] = pressed;
+    }
+
     for (let i = 0; i < SUBSTEPS; i++) world.step(dt / SUBSTEPS);
     consumeEvents();
+
+    // ball settled back in the shooter lane: allow a fresh plunge
+    if (ballPhase === 'play' && world.ball.pos.x > 44.5 && world.ball.pos.y < 38) {
+      const sp = Math.hypot(world.ball.vel.x, world.ball.vel.y);
+      if (sp < 16) { ballPhase = 'lane'; plungerCharge = 0; }
+    }
+
+    // stuck-ball watchdog: never leave the cabinet wedged
+    if (ballPhase === 'play') {
+      const sp = Math.hypot(world.ball.vel.x, world.ball.vel.y);
+      stuckTimer = sp < 7 ? stuckTimer + dt : 0;
+      if (stuckTimer > 5) spawnBall();
+    }
 
     if (ballPhase === 'play' && world.ball.pos.y < table.meta.drainY) {
       ballPhase = 'drain';
       drainTimer = 1.3;
       world.ball.vel.x = 0;
       world.ball.vel.y = 0;
+      audio.drain();
       if (mode === STATE.PLAYING) setMessage('BALL LOST');
     }
 
@@ -319,6 +340,7 @@ export function start() {
 
   input.load().then(() => {
     wireInput();
+    audio.unlock();
     resize();
     requestAnimationFrame(frame);
   });

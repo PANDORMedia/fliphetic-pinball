@@ -15,15 +15,18 @@
 </head>
 <body>
 
-  <!-- playfield: the Three.js game -->
+  <!-- playfield: the Three.js game, with side panels filling a 16:9 screen -->
   <div id="playfield-screen">
     <canvas id="view"></canvas>
-    <div id="hud">
-      <div class="hud-row">
-        <span id="ball">HETIC PINBALL</span>
-        <span id="message"></span>
-      </div>
+
+    <div class="pf-side pf-left">
+      <div class="pf-label">SCORE</div>
       <div id="score">0</div>
+      <div id="ball">HETIC PINBALL</div>
+    </div>
+
+    <div class="pf-side pf-right">
+      <div class="pf-label">TARGETS</div>
       <div id="hetic">
         <span class="hetic-letter">H</span>
         <span class="hetic-letter">E</span>
@@ -31,8 +34,11 @@
         <span class="hetic-letter">I</span>
         <span class="hetic-letter">C</span>
       </div>
+      <div class="pf-label">PLUNGER</div>
+      <div id="plunger-meter"><div id="plunger-fill"></div></div>
+      <div id="message"></div>
     </div>
-    <div id="plunger-meter"><div id="plunger-fill"></div></div>
+
     <div id="attract">
       <div class="attract-box">
         <div class="attract-title">HETIC<br>PINBALL</div>

@@ -255,5 +255,116 @@ export function createTable(world) {
   ballGlow.scale.set(9, 9, 1);
   group.add(ballMesh, ballGlow);
 
-  return { group, meta, flipperMeshes, bumperMeshes, targetMeshes, ballMesh, ballGlow };
+  // --- guide posts (physics) ----------------------------------------------
+  for (const p of [{ x: 20, y: 28 }, { x: 28, y: 28 }]) {
+    world.circles.push({ pos: { x: p.x, y: p.y }, radius: 1.3, restitution: 0.75 });
+    const post = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.3, 1.3, 3.2, 16),
+      new THREE.MeshStandardMaterial({
+        color: GREEN_BRIGHT, emissive: GREEN_BRIGHT, emissiveIntensity: 1.3,
+        roughness: 0.3,
+      }),
+    );
+    post.rotation.x = Math.PI / 2;
+    post.position.set(p.x, p.y, 1.6);
+    group.add(post);
+  }
+
+  // --- playfield decal (visual) -------------------------------------------
+  {
+    const c = document.createElement('canvas');
+    c.width = 512; c.height = 256;
+    const g = c.getContext('2d');
+    g.clearRect(0, 0, 512, 256);
+    g.fillStyle = 'rgba(93,216,106,0.16)';
+    g.font = 'bold 120px monospace';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    g.fillText('HETIC', 256, 96);
+    g.font = 'bold 64px monospace';
+    g.fillText('PINBALL', 256, 188);
+    const decal = new THREE.Mesh(
+      new THREE.PlaneGeometry(34, 17),
+      new THREE.MeshBasicMaterial({
+        map: new THREE.CanvasTexture(c), transparent: true, opacity: 0.7,
+      }),
+    );
+    decal.position.set(23.5, 50, 0.12);
+    group.add(decal);
+  }
+
+  // --- perimeter chase lights (visual, animated) --------------------------
+  const chase = [];
+  const ring = [];
+  for (let x = 8; x <= 46; x += 6) { ring.push({ x, y: 101 }); }
+  for (let y = 96; y >= 24; y -= 8) { ring.push({ x: 1.5, y }); }
+  for (let x = 8; x <= 40; x += 6) { ring.push({ x, y: 1.5 }); }
+  ring.forEach((p) => {
+    const dot = new THREE.Mesh(
+      new THREE.SphereGeometry(0.9, 12, 10),
+      new THREE.MeshStandardMaterial({ color: GREEN, emissive: GREEN, emissiveIntensity: 0.6 }),
+    );
+    dot.position.set(p.x, p.y, 0.9);
+    group.add(dot);
+    chase.push(dot);
+  });
+
+  // --- 3D side-art panels (fill a 16:9 screen) ----------------------------
+  const sideBars = [];
+  function sidePanel(cx) {
+    const panel = new THREE.Group();
+    const back = new THREE.Mesh(
+      new THREE.BoxGeometry(26, 104, 1.5),
+      new THREE.MeshStandardMaterial({
+        color: 0x04130a, emissive: GREEN, emissiveIntensity: 0.12, roughness: 0.9,
+      }),
+    );
+    back.position.set(cx, 52, -1);
+    panel.add(back);
+    // emissive frame
+    for (const [a, b] of [
+      [{ x: cx - 12, y: 4 }, { x: cx - 12, y: 100 }],
+      [{ x: cx + 12, y: 4 }, { x: cx + 12, y: 100 }],
+      [{ x: cx - 12, y: 4 }, { x: cx + 12, y: 4 }],
+      [{ x: cx - 12, y: 100 }, { x: cx + 12, y: 100 }],
+    ]) {
+      panel.add(segmentMesh(a, b, GREEN, 0.8, 2));
+    }
+    // animated data bars
+    for (let i = 0; i < 5; i++) {
+      const bar = new THREE.Mesh(
+        new THREE.BoxGeometry(20, 2.4, 2),
+        new THREE.MeshStandardMaterial({
+          color: GREEN, emissive: GREEN, emissiveIntensity: 1.0,
+          transparent: true, opacity: 0.85,
+        }),
+      );
+      bar.position.set(cx, 16 + i * 17, 1.4);
+      panel.add(bar);
+      sideBars.push({ mesh: bar, phase: i * 0.7 });
+    }
+    group.add(panel);
+  }
+  sidePanel(-16);
+  sidePanel(70);
+
+  // --- decorative animation ------------------------------------------------
+  let clock = 0;
+  function animate(dt) {
+    clock += dt;
+    chase.forEach((dot, i) => {
+      const lit = (Math.sin(clock * 3 - i * 0.5) + 1) / 2;
+      dot.material.emissiveIntensity = 0.25 + lit * 1.8;
+    });
+    for (const b of sideBars) {
+      const k = (Math.sin(clock * 1.6 + b.phase) + 1) / 2;
+      b.mesh.material.emissiveIntensity = 0.3 + k * 1.7;
+      b.mesh.material.opacity = 0.4 + k * 0.55;
+    }
+  }
+
+  return {
+    group, meta, flipperMeshes, bumperMeshes, targetMeshes,
+    ballMesh, ballGlow, animate,
+  };
 }

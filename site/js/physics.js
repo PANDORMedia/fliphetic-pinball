@@ -61,7 +61,7 @@ export class World {
     this.segments = []; // { a, b, restitution, radius, kind, kick, ... }
     this.circles = []; // { pos, radius, restitution, kind, kick, ... }
     this.flippers = [];
-    this.maxSpeed = 165;
+    this.maxSpeed = 200;
     this.events = []; // hit events for the game layer to consume
   }
 
