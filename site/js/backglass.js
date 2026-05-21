@@ -34,6 +34,11 @@ export function start() {
 
   const texLoader = new THREE.TextureLoader();
 
+  // make sure the pixel font is loaded before callouts draw to canvas
+  if (document.fonts && document.fonts.load) {
+    document.fonts.load('64px "Press Start 2P"').catch(() => {});
+  }
+
   function glowTexture() {
     const c = document.createElement('canvas');
     c.width = c.height = 128;
@@ -124,6 +129,8 @@ export function start() {
   scene.add(callout);
   let calloutLife = 0;
   let calloutMax = 1;
+  let badgeScale = 1;
+  let badgeY = 2;
 
   function showCallout(text, important) {
     if (!important && calloutLife > 0.85) return;
@@ -131,19 +138,19 @@ export function start() {
     cctx.textAlign = 'center';
     cctx.textBaseline = 'middle';
     cctx.shadowColor = '#5dd86a';
-    cctx.shadowBlur = 42;
-    // shrink the font until the text fits the canvas (so it never overflows)
-    let size = 168;
-    cctx.font = `bold ${size}px monospace`;
-    while (size > 38 && cctx.measureText(text).width > 940) {
-      size -= 8;
-      cctx.font = `bold ${size}px monospace`;
+    cctx.shadowBlur = 38;
+    // the cabinet pixel font; shrink until the text fits the canvas
+    let size = 116;
+    cctx.font = `${size}px "Press Start 2P", monospace`;
+    while (size > 22 && cctx.measureText(text).width > 940) {
+      size -= 6;
+      cctx.font = `${size}px "Press Start 2P", monospace`;
     }
-    cctx.lineWidth = 9;
+    cctx.lineWidth = 8;
     cctx.strokeStyle = '#0c3a1c';
-    cctx.strokeText(text, 512, 140);
+    cctx.strokeText(text, 512, 132);
     cctx.fillStyle = '#c6ffc6';
-    cctx.fillText(text, 512, 140);
+    cctx.fillText(text, 512, 132);
     calloutTex.needsUpdate = true;
     calloutLife = calloutMax = 2.1;
   }
@@ -270,9 +277,14 @@ export function start() {
 
     drawRain(energetic ? 1.5 : 0.9);
 
-    badge.position.y = 4 + Math.sin(clock * 1.1) * 1.2;
+    // the logo grows when idle and shrinks + rises to free space for a callout
+    const calloutOn = calloutLife > 0;
+    const lerp = Math.min(1, dt * 7);
+    badgeScale += ((calloutOn ? 0.6 : 1.0) - badgeScale) * lerp;
+    badgeY += ((calloutOn ? 10 : 2) - badgeY) * lerp;
+    badge.position.y = badgeY + Math.sin(clock * 1.1) * 1.0;
     badge.rotation.z = Math.sin(clock * 0.5) * 0.05;
-    badge.scale.setScalar(1 + pulse * 0.12 + Math.sin(clock * 2.2) * 0.02);
+    badge.scale.setScalar(badgeScale * (1 + pulse * 0.12 + Math.sin(clock * 2.2) * 0.02));
 
     rainPlane.material.opacity = 0.66 + pulse * 0.24;
     flash.material.opacity = flashLevel * 0.5;
