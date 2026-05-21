@@ -97,29 +97,15 @@ export function start() {
   rainPlane.position.set(0, 0, -26);
   scene.add(rainPlane);
 
-  // --- wireframe core ------------------------------------------------------
-  const core = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(9, 1),
-    new THREE.MeshBasicMaterial({ color: 0x5dd86a, wireframe: true, transparent: true, opacity: 0.5 }),
-  );
-  core.position.set(0, 0, -4);
-  scene.add(core);
-  const coreInner = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(5, 0),
-    new THREE.MeshBasicMaterial({ color: 0x0c3a1c, wireframe: true, transparent: true, opacity: 0.5 }),
-  );
-  coreInner.position.copy(core.position);
-  scene.add(coreInner);
-
-  // --- HETIC badge (boot.png) ---------------------------------------------
+  // --- HETIC badge (boot.png) - the centrepiece ---------------------------
   const badge = new THREE.Mesh(
-    new THREE.PlaneGeometry(16, 16),
+    new THREE.PlaneGeometry(22, 22),
     new THREE.MeshBasicMaterial({
       map: texLoader.load('assets/boot.png'), transparent: true,
       blending: THREE.AdditiveBlending, depthWrite: false,
     }),
   );
-  badge.position.set(0, 9, 2);
+  badge.position.set(0, 4, 2);
   scene.add(badge);
 
   // --- commentary callout --------------------------------------------------
@@ -284,16 +270,9 @@ export function start() {
 
     drawRain(energetic ? 1.5 : 0.9);
 
-    core.rotation.x += dt * 0.3;
-    core.rotation.y += dt * 0.42;
-    coreInner.rotation.x -= dt * 0.5;
-    coreInner.rotation.y -= dt * 0.62;
-    core.scale.setScalar(1 + pulse * 0.2 + Math.sin(clock * 1.6) * 0.04);
-    core.material.opacity = 0.42 + pulse * 0.4 + Math.sin(clock * 2) * 0.1;
-
-    badge.position.y = 9 + Math.sin(clock * 1.1) * 1.1;
-    badge.rotation.z = Math.sin(clock * 0.5) * 0.06;
-    badge.scale.setScalar(1 + pulse * 0.1);
+    badge.position.y = 4 + Math.sin(clock * 1.1) * 1.2;
+    badge.rotation.z = Math.sin(clock * 0.5) * 0.05;
+    badge.scale.setScalar(1 + pulse * 0.12 + Math.sin(clock * 2.2) * 0.02);
 
     rainPlane.material.opacity = 0.66 + pulse * 0.24;
     flash.material.opacity = flashLevel * 0.5;

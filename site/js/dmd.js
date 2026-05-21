@@ -155,7 +155,7 @@ export function start() {
 
     if (s.message && s.message !== lastMessage) {
       if (/COMPLETE/i.test(s.message)) playFx('explode');
-      else if (/^HETIC /i.test(s.message)) playFx('wave');
+      else if (/^[HETIC]$/.test(s.message)) playFx('wave');
       lastMessage = s.message;
     }
     snap = s;

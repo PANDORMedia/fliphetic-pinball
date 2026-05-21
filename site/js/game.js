@@ -170,7 +170,7 @@ export function start() {
         if (!hetic[i]) {
           hetic[i] = true;
           score += 1500;
-          setMessage('HETIC ' + ev.obj.letter);
+          setMessage(ev.obj.letter);
           audio.target();
           const tm = table.targetMeshes[i];
           if (tm) tm.lit = true;
