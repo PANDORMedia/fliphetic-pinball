@@ -124,6 +124,11 @@ export class World {
     let d = Math.hypot(nx, ny);
     const minD = ball.radius + segR;
     if (d >= minD) return;
+    // one-way gate: transparent when the ball travels in the allowed direction
+    if (s.passDir) {
+      const through = ball.vel.x * s.passDir.x + ball.vel.y * s.passDir.y;
+      if (through > 0) return;
+    }
     if (d < 1e-6) {
       const abx = s.b.x - s.a.x;
       const aby = s.b.y - s.a.y;

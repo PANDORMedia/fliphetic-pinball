@@ -10,49 +10,49 @@
         href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
   <link rel="stylesheet" href="style.css">
   <script type="importmap">
-  {
-    "imports": {
-      "three": "./vendor/three.module.js"
-    }
-  }
+  { "imports": { "three": "./vendor/three.module.js" } }
   </script>
 </head>
 <body>
-  <canvas id="view"></canvas>
 
-  <!-- top score strip -->
-  <div id="hud">
-    <div class="hud-row">
-      <span id="ball">HETIC PINBALL</span>
-      <span id="message"></span>
-    </div>
-    <div id="score">0</div>
-    <div id="hetic">
-      <span class="hetic-letter">H</span>
-      <span class="hetic-letter">E</span>
-      <span class="hetic-letter">T</span>
-      <span class="hetic-letter">I</span>
-      <span class="hetic-letter">C</span>
-    </div>
-  </div>
-
-  <!-- attract overlay -->
-  <div id="attract">
-    <div class="attract-box">
-      <div class="attract-title">HETIC<br>PINBALL</div>
-      <div class="attract-sub">MATRIX EDITION</div>
-      <div class="attract-press">PRESS START</div>
-      <div class="attract-controls">
-        <span>&#9665; &#9655; FLIPPERS</span>
-        <span>SPACE LAUNCH</span>
-        <span>ENTER START</span>
+  <!-- playfield: the Three.js game -->
+  <div id="playfield-screen">
+    <canvas id="view"></canvas>
+    <div id="hud">
+      <div class="hud-row">
+        <span id="ball">HETIC PINBALL</span>
+        <span id="message"></span>
       </div>
-      <div class="attract-demo">DEMO PLAYING &mdash; AUTO MODE</div>
+      <div id="score">0</div>
+      <div id="hetic">
+        <span class="hetic-letter">H</span>
+        <span class="hetic-letter">E</span>
+        <span class="hetic-letter">T</span>
+        <span class="hetic-letter">I</span>
+        <span class="hetic-letter">C</span>
+      </div>
+    </div>
+    <div id="plunger-meter"><div id="plunger-fill"></div></div>
+    <div id="attract">
+      <div class="attract-box">
+        <div class="attract-title">HETIC<br>PINBALL</div>
+        <div class="attract-press">PRESS START</div>
+        <div class="attract-controls">
+          <span>&#9665; &#9655; FLIPPERS</span>
+          <span>HOLD SPACE &mdash; PLUNGER</span>
+          <span>ENTER &mdash; START</span>
+        </div>
+        <div class="attract-demo">DEMO PLAYING</div>
+      </div>
     </div>
   </div>
+
+  <!-- dmd + backglass: built by their modules -->
+  <div id="dmd-screen"></div>
+  <div id="backglass-screen"></div>
 
   <div id="scanlines"></div>
 
-  <script type="module" src="js/game.js"></script>
+  <script type="module" src="js/main.js"></script>
 </body>
 </html>

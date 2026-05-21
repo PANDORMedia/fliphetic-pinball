@@ -2,20 +2,22 @@
 id          = "fliphetic-pinball"
 name        = "HETIC Pinball"
 authors     = ["PANDOR Media"]
-description = "Matrix-themed Three.js pinball demo. Runs on the playfield screen, plays itself in attract mode when left alone, and is controlled by an ESP32 button box via the editable config/buttons.json map."
+description = "Top-down Three.js pinball across all three cabinet screens. Attract-mode auto-play, variable plunger with a one-way shooter circuit, keyboard or ESP32 control. The playfield broadcasts live state to the DMD and backglass."
 
 [deploy]
 strategy = "branch"
 ref      = "main"
 
-# The game runs on the large portrait playfield screen.
+# All three screens are served by the one nginx service. The page reads the
+# ?screen= query param to pick the playfield game, the DMD, or the backglass.
 [screens]
 playfield = { service = "game", port = 80 }
+backglass = { service = "game", port = 80, path = "/?screen=backglass" }
+dmd       = { service = "game", port = 80, path = "/?screen=dmd" }
 
 [compose]
 file = "deploy/docker-compose.yml"
-ready_timeout = 15
+ready_timeout = 40
 
-# No [esp32] block: the firmware is not flashed by the cabinet. The ESP32 in
-# the button box acts as a USB HID keyboard. See firmware/README.md and
-# site/config/buttons.json.
+# No [esp32] block: the ESP32 button box is a USB HID keyboard, not flashed by
+# the cabinet. See firmware/ and site/config/buttons.json.

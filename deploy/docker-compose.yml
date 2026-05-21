@@ -1,12 +1,27 @@
-# One nginx service serves the Three.js pinball game on the playfield screen.
+# Two services: nginx serves the game on all three screens and proxies /state
+# to the relay; the relay holds the live game state shared between screens.
 services:
   game:
     image: nginx:alpine
     volumes:
       - ../site:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     ports: ["0:80"]
+    depends_on: [relay]
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+
+  relay:
+    image: node:20-alpine
+    working_dir: /app
+    volumes:
+      - ../relay:/app:ro
+    command: ["node", "server.js"]
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8090/"]
       interval: 5s
       timeout: 2s
       retries: 5
