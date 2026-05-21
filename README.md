@@ -25,6 +25,10 @@ backglass poll it. All three screens are served by one nginx service.
 | Plunger | **Hold** Space to charge, release to launch |
 | Start game | Enter or S |
 | Nudge table | Down Arrow or N |
+| Mute music | M |
+
+Background music: one track on the title screen, another while playing,
+crossfaded. Press M to mute.
 
 Controls are defined in `site/config/buttons.json`. Edit that file to remap
 them; it is also the contract for the ESP32 button box (see `firmware/`). The

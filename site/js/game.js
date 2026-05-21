@@ -9,6 +9,7 @@ import { createTable } from './table.js';
 import { Input } from './input.js';
 import { publisher } from './net.js';
 import { audio } from './audio.js';
+import { music } from './music.js';
 
 export function start() {
   const canvas = document.getElementById('view');
@@ -132,6 +133,7 @@ export function start() {
   function wireInput() {
     const poke = () => {
       audio.unlock();
+      music.unlock();
       if (mode === STATE.ATTRACT) startGame();
     };
     input.onPress('start', poke);
@@ -140,6 +142,7 @@ export function start() {
     input.onPress('plunger', poke);
     input.onPress('nudge', () => {
       audio.unlock();
+      music.unlock();
       world.ball.vel.x += (Math.random() * 2 - 1) * 10;
       world.ball.vel.y += 11;
       shake = Math.max(shake, 0.6);
@@ -359,6 +362,9 @@ export function start() {
       if (gameoverTimer <= 0) enterAttract();
     }
 
+    music.setMode(mode === STATE.PLAYING ? 'play' : 'attract');
+    music.update(dt);
+
     updateVisuals(dt);
     updateHud(dt);
     broadcast();
@@ -382,6 +388,8 @@ export function start() {
   input.load().then(() => {
     wireInput();
     audio.unlock();
+    music.load();
+    music.unlock();
     resize();
     requestAnimationFrame(frame);
   });
