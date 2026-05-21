@@ -171,6 +171,18 @@ body[data-screen="backglass"] #backglass-screen { display: block; }
         filter: brightness(1.6); }
   78% { transform: translate(-0.3vw, -0.2vh); clip-path: inset(70% 0 6% 0); }
 }
+/* matrix-style ASCII animation overlay, plays on events */
+.dmd-fx {
+  position: absolute; left: 0; right: 0; top: 16%; bottom: 30%;
+  margin: 0; display: flex; align-items: center; justify-content: center;
+  font-family: "VT323", monospace; white-space: pre; line-height: 1.0;
+  font-size: clamp(8px, 2.1vw, 26px); letter-spacing: 0.06em;
+  color: var(--green-bright);
+  text-shadow: 0 0 1.4vh var(--green), 0 0 3vh var(--green);
+  opacity: 0; transition: opacity 0.12s ease; pointer-events: none; z-index: 4;
+}
+.dmd-fx.active { opacity: 1; }
+
 .dmd-hetic { display: flex; justify-content: center; gap: 2.2vw;
              font-family: "Press Start 2P", monospace; }
 .dmd-hetic span {

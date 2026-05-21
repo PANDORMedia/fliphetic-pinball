@@ -40,7 +40,6 @@ export function start() {
   world.resetBall(table.meta.ballStart);
 
   const el = {
-    score: document.getElementById('score'),
     ball: document.getElementById('ball'),
     message: document.getElementById('message'),
     attract: document.getElementById('attract'),
@@ -265,7 +264,6 @@ export function start() {
   }
 
   function updateHud(dt) {
-    el.score.textContent = score.toLocaleString('en-US');
     el.ball.textContent = mode === STATE.PLAYING ? `BALL ${ballNum} / 3` : 'HETIC PINBALL';
     if (messageTimer > 0) {
       messageTimer -= dt;
