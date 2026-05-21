@@ -58,6 +58,8 @@ export function start() {
   let gameoverTimer = 0;
   let plungerCharge = 0;
   let stuckTimer = 0;
+  let stuckNudges = 0;
+  let ambientTimer = 0;
   let shake = 0;
   let tiltMeter = 0;
   let tilted = false;
@@ -79,6 +81,7 @@ export function start() {
     laneTimer = 0;
     plungerCharge = 0;
     stuckTimer = 0;
+    stuckNudges = 0;
     tiltMeter = 0;
     tilted = false;
     table.trailClear();
@@ -90,6 +93,7 @@ export function start() {
     world.ball.vel.y = 150 + power * 44;
     ballPhase = 'play';
     audio.launch();
+    table.burst(table.meta.ballStart.x, table.meta.ballStart.y + 4, 18);
   }
 
   function resetTargets() {
@@ -157,17 +161,19 @@ export function start() {
     const bx = world.ball.pos.x;
     const by = world.ball.pos.y;
     for (const ev of world.events) {
-      if (ev.type === 'bumper') {
+      if (ev.type === 'flipper') {
+        table.burst(ev.x, ev.y, 8);
+      } else if (ev.type === 'bumper') {
         score += 750;
         ev.obj._pulse = 1;
         audio.bumper();
-        table.burst(bx, by, 14);
-        shake = Math.max(shake, 0.7);
+        table.burst(bx, by, 26);
+        shake = Math.max(shake, 0.8);
       } else if (ev.type === 'slingshot') {
         score += 120;
         audio.slingshot();
-        table.burst(bx, by, 8);
-        shake = Math.max(shake, 0.4);
+        table.burst(bx, by, 14);
+        shake = Math.max(shake, 0.45);
       } else if (ev.type === 'target') {
         const i = ev.obj.letterIndex;
         if (!hetic[i]) {
@@ -181,14 +187,16 @@ export function start() {
           score += 250;
           audio.target();
         }
-        table.burst(bx, by, 16);
+        table.burst(bx, by, 28);
         shake = Math.max(shake, 0.6);
         if (hetic.every(Boolean)) {
           score += 25000;
           setMessage('HETIC COMPLETE  +25000', 3);
           audio.jackpot();
-          table.burst(26, 70, 60);
-          shake = 2.2;
+          for (let k = 0; k < 6; k++) {
+            table.burst(8 + Math.random() * 32, 44 + Math.random() * 46, 30);
+          }
+          shake = 2.4;
           resetTargets();
         }
       }
@@ -300,6 +308,12 @@ export function start() {
 
     if (mode === STATE.ATTRACT) {
       attractAI(dt);
+      // ambient fireworks keep the attract playfield alive
+      ambientTimer -= dt;
+      if (ambientTimer <= 0) {
+        table.burst(8 + Math.random() * 32, 34 + Math.random() * 56, 18);
+        ambientTimer = 0.8 + Math.random() * 1.2;
+      }
     } else if (mode === STATE.PLAYING) {
       playingControl(dt);
       tiltMeter = Math.max(0, tiltMeter - dt * 0.45);
@@ -324,10 +338,22 @@ export function start() {
       if (sp < 16) { ballPhase = 'lane'; plungerCharge = 0; }
     }
 
+    // stuck-ball recovery: nudge a wedged ball loose, respawn only if that fails
     if (ballPhase === 'play') {
       const sp = Math.hypot(world.ball.vel.x, world.ball.vel.y);
-      stuckTimer = sp < 7 ? stuckTimer + dt : 0;
-      if (stuckTimer > 5) spawnBall();
+      if (sp < 9) {
+        stuckTimer += dt;
+        if (stuckTimer > 2.2) {
+          world.ball.vel.x += (world.ball.pos.x < 23 ? 1 : -1) * 20;
+          world.ball.vel.y -= 22;
+          stuckTimer = 0;
+          stuckNudges += 1;
+          if (stuckNudges > 3) spawnBall();
+        }
+      } else {
+        stuckTimer = 0;
+        stuckNudges = 0;
+      }
     }
 
     if (ballPhase === 'play' && world.ball.pos.y < table.meta.drainY) {
@@ -385,10 +411,10 @@ export function start() {
   }
   window.addEventListener('resize', resize);
 
+  music.load(); // synchronous so the M / volume keys are always live
   input.load().then(() => {
     wireInput();
     audio.unlock();
-    music.load();
     music.unlock();
     resize();
     requestAnimationFrame(frame);

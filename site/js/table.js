@@ -104,7 +104,7 @@ export function createTable(world) {
     [{ x: 44, y: 40 }, { x: 36, y: 16 }], // right funnel
   ];
   for (const [a, b] of walls) {
-    world.segments.push({ a, b, restitution: 0.4, radius: 0, kind: 'wall' });
+    world.segments.push({ a, b, restitution: 0.3, radius: 0, kind: 'wall' });
     group.add(segmentMesh(a, b, GREEN, 0.7));
   }
 
@@ -116,7 +116,7 @@ export function createTable(world) {
     const a = { x: 44, y: 84 };
     const b = { x: 44, y: 95 };
     world.segments.push({
-      a, b, restitution: 0.3, radius: 0, kind: 'gate',
+      a, b, restitution: 0.22, radius: 0, kind: 'gate',
       passDir: { x: -1, y: 0 },
     });
     const m = segmentMesh(a, b, GREEN_BRIGHT, 0.6, WALL_H * 0.5);
@@ -131,7 +131,7 @@ export function createTable(world) {
     [{ x: 41, y: 33 }, { x: 38, y: 21 }],
   ]) {
     world.segments.push({
-      a, b, restitution: 0.6, radius: 0.6, kind: 'slingshot', kick: 34, cool: 0,
+      a, b, restitution: 0.52, radius: 0.6, kind: 'slingshot', kick: 30, cool: 0,
     });
     group.add(segmentMesh(a, b, GREEN_BRIGHT, 1.4, WALL_H + 0.5));
   }
@@ -141,8 +141,8 @@ export function createTable(world) {
   for (const p of [{ x: 14, y: 68 }, { x: 28, y: 79 }, { x: 33, y: 63 }]) {
     const radius = 3.6;
     const circle = {
-      pos: { x: p.x, y: p.y }, radius, restitution: 0.5,
-      kind: 'bumper', kick: 30, cool: 0,
+      pos: { x: p.x, y: p.y }, radius, restitution: 0.42,
+      kind: 'bumper', kick: 29, cool: 0,
     };
     const ring = new THREE.Mesh(
       new THREE.CylinderGeometry(radius, radius, 4.4, 30),
@@ -185,7 +185,7 @@ export function createTable(world) {
     const a = { x: x - 1.8, y };
     const b = { x: x + 1.8, y };
     const seg = {
-      a, b, restitution: 0.5, radius: 0.5, kind: 'target',
+      a, b, restitution: 0.42, radius: 0.5, kind: 'target',
       letterIndex: i, letter: ch, cool: 0,
     };
     const mesh = new THREE.Mesh(
@@ -258,7 +258,7 @@ export function createTable(world) {
 
   // --- guide posts (physics) ----------------------------------------------
   for (const p of [{ x: 20, y: 28 }, { x: 28, y: 28 }]) {
-    world.circles.push({ pos: { x: p.x, y: p.y }, radius: 1.3, restitution: 0.75 });
+    world.circles.push({ pos: { x: p.x, y: p.y }, radius: 1.3, restitution: 0.5 });
     const post = new THREE.Mesh(
       new THREE.CylinderGeometry(1.3, 1.3, 3.2, 16),
       new THREE.MeshStandardMaterial({
@@ -333,7 +333,7 @@ export function createTable(world) {
 
   // --- FX: hit particles --------------------------------------------------
   const particles = [];
-  for (let i = 0; i < 80; i++) {
+  for (let i = 0; i < 170; i++) {
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({
       map: sharedGlow, color: GREEN_BRIGHT, blending: THREE.AdditiveBlending,
       transparent: true, depthWrite: false, opacity: 0,

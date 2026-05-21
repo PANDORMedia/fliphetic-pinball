@@ -61,7 +61,7 @@ export class World {
     this.segments = []; // { a, b, restitution, radius, kind, kick, ... }
     this.circles = []; // { pos, radius, restitution, kind, kick, ... }
     this.flippers = [];
-    this.maxSpeed = 200;
+    this.maxSpeed = 172;
     this.events = []; // hit events for the game layer to consume
   }
 
@@ -74,14 +74,17 @@ export class World {
   step(dt) {
     const ball = this.ball;
 
-    for (const f of this.flippers) f.update(dt);
+    for (const f of this.flippers) {
+      f.update(dt);
+      if (f.cool > 0) f.cool -= dt;
+    }
 
     ball.vel.x += this.gravity.x * dt;
     ball.vel.y += this.gravity.y * dt;
 
-    // light air drag keeps the simulation calm
-    ball.vel.x *= 0.9995;
-    ball.vel.y *= 0.9995;
+    // air drag keeps the simulation calm and the ball from feeling too lively
+    ball.vel.x *= 0.9991;
+    ball.vel.y *= 0.9991;
 
     const sp = Math.hypot(ball.vel.x, ball.vel.y);
     if (sp > this.maxSpeed) {
@@ -209,9 +212,14 @@ export class World {
     const rvy = ball.vel.y - vfy;
     const vn = rvx * nx + rvy * ny;
     if (vn < 0) {
-      const e = 0.5;
+      const e = 0.34;
       ball.vel.x -= (1 + e) * vn * nx;
       ball.vel.y -= (1 + e) * vn * ny;
+      // spark event when the ball is struck by an actively swinging flipper
+      if (Math.abs(f.angVel) > 4 && (f.cool || 0) <= 0) {
+        f.cool = 0.14;
+        this.events.push({ type: 'flipper', x: cp.x, y: cp.y });
+      }
     }
   }
 }
