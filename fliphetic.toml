@@ -19,5 +19,12 @@ dmd       = { service = "game", port = 80, path = "/?screen=dmd" }
 file = "deploy/docker-compose.yml"
 ready_timeout = 40
 
-# No [esp32] block: the ESP32 button box is a USB HID keyboard, not flashed by
-# the cabinet. See firmware/ and site/config/buttons.json.
+# The cabinet flashes the ESP32 button-box firmware on every load. The merged
+# binary is built and committed by .github/workflows/firmware.yml. baud is set
+# to 115200 — the 921600 default is unreliable on this cab's USB-serial link.
+[esp32.esp32]
+firmware   = "firmware/build/firmware.bin"
+chip       = "esp32"
+flash_addr = "0x0"
+baud       = 115200
+required   = false

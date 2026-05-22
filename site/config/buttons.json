@@ -1,48 +1,80 @@
 {
-  "_comment": "HETIC Pinball button map. Edit this file to remap controls. Each entry's `keys` are KeyboardEvent.code values: the game responds to ANY of them, so you can play on a plain keyboard now and add the ESP32 later. The ESP32 firmware reads `gpio` and emits `keys[0]` as a USB HID key. See firmware/README.md.",
+  "_comment": "HETIC Pinball button map — the cabinet's 9 buttons. Single source of truth, shared by the ESP32 firmware (reads `gpio`) and the game (maps button `id` -> `action`). `action` is one of flipperLeft, flipperRight, plunger, start, nudge — or null for a button the game does not use. `keys` are KeyboardEvent.code values so the game stays playable on a plain keyboard. If you rewire, edit this file AND the table in firmware/src/main.cpp.",
   "device": "esp32",
   "poll_hz": 250,
   "debounce_ms": 8,
   "buttons": [
     {
-      "id": "flipper-left",
-      "label": "Left flipper",
+      "id": "black-left",
+      "label": "Black Left",
+      "gpio": 16,
+      "active_low": true,
       "action": "flipperLeft",
-      "gpio": 12,
-      "keys": ["ShiftLeft", "KeyA", "ArrowLeft"],
-      "active_low": true
+      "keys": ["ShiftLeft", "KeyA", "ArrowLeft"]
     },
     {
-      "id": "flipper-right",
-      "label": "Right flipper",
+      "id": "white-left",
+      "label": "White Left",
+      "gpio": 4,
+      "active_low": true,
+      "action": "start",
+      "keys": ["Enter", "KeyS"]
+    },
+    {
+      "id": "front-left-green",
+      "label": "Front Left Green",
+      "gpio": 17,
+      "active_low": true,
+      "action": null,
+      "keys": []
+    },
+    {
+      "id": "front-left-yellow",
+      "label": "Front Left Yellow",
+      "gpio": 18,
+      "active_low": true,
+      "action": null,
+      "keys": []
+    },
+    {
+      "id": "front-left-red",
+      "label": "Front Left Red",
+      "gpio": 19,
+      "active_low": true,
+      "action": null,
+      "keys": []
+    },
+    {
+      "id": "black-right",
+      "label": "Black Right",
+      "gpio": 13,
+      "active_low": true,
       "action": "flipperRight",
-      "gpio": 14,
-      "keys": ["ShiftRight", "KeyL", "ArrowRight"],
-      "active_low": true
+      "keys": ["ShiftRight", "KeyL", "ArrowRight"]
+    },
+    {
+      "id": "white-right",
+      "label": "White Right",
+      "gpio": 25,
+      "active_low": true,
+      "action": "nudge",
+      "keys": ["ArrowDown", "KeyN"]
+    },
+    {
+      "id": "front-white",
+      "label": "Front White",
+      "gpio": 33,
+      "active_low": true,
+      "action": null,
+      "keys": []
     },
     {
       "id": "plunger",
-      "label": "Plunger / launch ball",
+      "label": "Plunger",
+      "gpio": 32,
+      "active_low": true,
       "action": "plunger",
-      "gpio": 27,
-      "keys": ["Space"],
-      "active_low": true
-    },
-    {
-      "id": "start",
-      "label": "Start game",
-      "action": "start",
-      "gpio": 26,
-      "keys": ["Enter", "KeyS"],
-      "active_low": true
-    },
-    {
-      "id": "nudge",
-      "label": "Nudge table",
-      "action": "nudge",
-      "gpio": 25,
-      "keys": ["ArrowDown", "KeyN"],
-      "active_low": true
+      "keys": ["Space"]
     }
   ]
 }

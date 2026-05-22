@@ -1,5 +1,7 @@
-# Two services: nginx serves the game on all three screens and proxies /state
-# to the relay; the relay holds the live game state shared between screens.
+# Three services: nginx serves the game on all three screens and proxies
+# /state to the relay (shared screen state) and /esp to the bridge (ESP32
+# button input). The relay holds live game state; the bridge relays the
+# ESP32 serial line.
 services:
   game:
     image: nginx:alpine
@@ -7,7 +9,7 @@ services:
       - ../site:/usr/share/nginx/html:ro
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     ports: ["0:80"]
-    depends_on: [relay]
+    depends_on: [relay, bridge]
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
       interval: 5s
@@ -24,6 +26,22 @@ services:
     command: ["node", "server.js"]
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8090/"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+
+  bridge:
+    # Reads the ESP32 button box over USB serial and serves it over HTTP/SSE.
+    image: public.ecr.aws/docker/library/node:20-alpine
+    working_dir: /app
+    volumes:
+      - ../bridge:/app:ro
+    command: ["node", "server.js"]
+    # The cabinet's ESP32 (CP2102 USB-UART), presented in-container as /dev/esp.
+    devices:
+      - "/dev/ttyUSB0:/dev/esp"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8091/"]
       interval: 5s
       timeout: 2s
       retries: 5

@@ -30,9 +30,14 @@ backglass poll it. All three screens are served by one nginx service.
 Background music: one track on the title screen, another while playing,
 crossfaded. Press M to mute.
 
-Controls are defined in `site/config/buttons.json`. Edit that file to remap
-them; it is also the contract for the ESP32 button box (see `firmware/`). The
-game works with a plain keyboard now; the ESP32 is optional.
+On the cabinet the buttons are real arcade buttons wired to an **ESP32**. The
+ESP32 reports button state over USB serial; the `bridge` service relays it and
+the game streams it (`/esp/events`). The cabinet flashes the ESP32 firmware on
+every load — see `firmware/`.
+
+Controls are defined in `site/config/buttons.json` — the single source of
+truth, shared by the firmware and the game. Edit it to remap. The game still
+works with a plain keyboard, so the ESP32 is optional for local dev.
 
 ## Gameplay
 
@@ -49,9 +54,10 @@ game works with a plain keyboard now; the ESP32 is optional.
 ```
 fliphetic.toml             Fliphetic app manifest (three screens)
 deploy/
-  docker-compose.yml       nginx (game) + node (relay)
-  nginx.conf               serves the game, proxies /state to the relay
+  docker-compose.yml       nginx (game) + node (relay + bridge)
+  nginx.conf               serves the game, proxies /state and /esp
 relay/server.js            tiny in-memory state relay (no dependencies)
+bridge/server.js           ESP32 serial -> HTTP/SSE bridge (no dependencies)
 site/
   index.html               shell for the three screens
   style.css                Matrix-themed styling
@@ -61,14 +67,18 @@ site/
     game.js                playfield: scene, state machine, attract AI
     physics.js             2D pinball physics
     table.js               table layout and Three.js meshes
-    input.js               keyboard / ESP32 input
+    input.js               keyboard + ESP32 input
     net.js                 state channel to the DMD and backglass
     dmd.js                 dot-matrix screen
     backglass.js           backglass screen
-  config/buttons.json      button map (keyboard + ESP32)
+  config/buttons.json      button map (keyboard + ESP32 button ids)
 firmware/
-  pinball_buttons.ino      ESP32-S2/S3 USB HID keyboard sketch
+  platformio.ini           classic-ESP32 build config
+  src/main.cpp             button-box firmware — button state over serial
+  build/firmware.bin       CI-built merged image the cabinet flashes
   README.md                wiring and flashing notes
+.github/workflows/
+  firmware.yml             builds + commits firmware/build/firmware.bin
 ```
 
 ## Run locally
