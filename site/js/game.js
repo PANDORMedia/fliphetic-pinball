@@ -64,11 +64,10 @@ export function start() {
   let stuckRefY = 11;
   let stuckRefTime = 0;
   let stuckNudges = 0;
-  let tiltTimer = 0;
   let ambientTimer = 0;
   let shake = 0;
   let tiltMeter = 0;
-  let tilted = false;
+  let tiltFlash = 0;   // seconds left on the TILT flash (feedback only)
   const hetic = [false, false, false, false, false];
   const flipperWas = [false, false];
   let message = '';
@@ -97,8 +96,7 @@ export function start() {
     stuckRefTime = 0;
     stuckNudges = 0;
     tiltMeter = 0;
-    tiltTimer = 0;
-    tilted = false;
+    tiltFlash = 0;
     table.trailClear();
   }
 
@@ -148,8 +146,11 @@ export function start() {
   }
 
   function doTilt() {
-    tilted = true;
-    setMessage('TILT', 5);
+    // A hard nudge — flash TILT for feedback only. No lock-out: the flippers
+    // stay live and the ball is not drained.
+    tiltFlash = 3;
+    tiltMeter = 0;
+    setMessage('TILT', 3);
     shake = 3.2;
     audio.drain();
   }
@@ -171,7 +172,7 @@ export function start() {
       world.ball.vel.x += (Math.random() * 2 - 1) * 10;
       world.ball.vel.y += 11;
       shake = Math.max(shake, 0.6);
-      if (mode === STATE.PLAYING && !tilted) {
+      if (mode === STATE.PLAYING) {
         tiltMeter += 0.34;
         if (tiltMeter > 0.62 && tiltMeter < 1) setMessage('CAREFUL!', 1);
       }
@@ -245,16 +246,11 @@ export function start() {
     const b = world.ball;
     const descending = b.vel.y < 14;
     const lowField = b.pos.y > 9 && b.pos.y < 36;
-    world.flippers[0].pressed = descending && lowField && b.pos.x > 7 && b.pos.x < 26;
-    world.flippers[1].pressed = descending && lowField && b.pos.x >= 24 && b.pos.x < 43;
+    world.flippers[0].pressed = descending && lowField && b.pos.x > 4 && b.pos.x < 23;
+    world.flippers[1].pressed = descending && lowField && b.pos.x >= 21 && b.pos.x < 40;
   }
 
   function playingControl(dt) {
-    if (tilted) {
-      world.flippers[0].pressed = false;
-      world.flippers[1].pressed = false;
-      return;
-    }
     world.flippers[0].pressed = input.isHeld('flipperLeft');
     world.flippers[1].pressed = input.isHeld('flipperRight');
     if (ballPhase === 'lane') {
@@ -329,7 +325,7 @@ export function start() {
     pushState({
       mode, score, ball: ballNum, balls: 3,
       message: messageTimer > 0 ? message : '',
-      hetic: hetic.slice(), tilt: tilted,
+      hetic: hetic.slice(), tilt: tiltFlash > 0,
       mult: multiplier, multTime: Math.ceil(multTimer),
       ts: Date.now(),
     });
@@ -353,7 +349,8 @@ export function start() {
     } else if (mode === STATE.PLAYING) {
       playingControl(dt);
       tiltMeter = Math.max(0, tiltMeter - dt * 0.45);
-      if (tiltMeter >= 1 && !tilted && ballPhase === 'play') doTilt();
+      if (tiltFlash > 0) tiltFlash = Math.max(0, tiltFlash - dt);
+      if (tiltMeter >= 1 && ballPhase === 'play') doTilt();
       if (input.idleMs() > 25000) enterAttract();
     } else {
       world.flippers[0].pressed = false;
@@ -409,18 +406,6 @@ export function start() {
       }
     }
 
-    // tilt always ends the ball: force a drain if it has not already
-    if (tilted && ballPhase === 'play') {
-      tiltTimer += dt;
-      if (tiltTimer > 2.6) {
-        ballPhase = 'drain';
-        drainTimer = 1.0;
-        world.ball.vel.x = 0;
-        world.ball.vel.y = 0;
-        audio.drain();
-      }
-    }
-
     if (ballPhase === 'play' && world.ball.pos.y < table.meta.drainY) {
       ballPhase = 'drain';
       drainTimer = 1.3;
@@ -428,7 +413,7 @@ export function start() {
       world.ball.vel.y = 0;
       audio.drain();
       table.trailClear();
-      if (mode === STATE.PLAYING) setMessage(tilted ? 'TILT' : 'BALL LOST');
+      if (mode === STATE.PLAYING) setMessage('BALL LOST');
     }
 
     if (ballPhase === 'drain') {

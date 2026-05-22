@@ -100,8 +100,8 @@ export function createTable(world) {
     [{ x: 52, y: 8 }, { x: 52, y: 96 }], // shooter lane outer
     [{ x: 44, y: 8 }, { x: 44, y: 84 }], // shooter lane divider (solid part)
     [{ x: 44, y: 8 }, { x: 52, y: 8 }], // shooter lane floor
-    [{ x: 3, y: 40 }, { x: 11, y: 16 }], // left funnel
-    [{ x: 44, y: 40 }, { x: 36, y: 16 }], // right funnel
+    [{ x: 3, y: 40 }, { x: 8, y: 16 }], // left funnel (feeds the left flipper)
+    [{ x: 44, y: 40 }, { x: 33, y: 16 }], // right funnel (feeds the right flipper)
   ];
   for (const [a, b] of walls) {
     world.segments.push({ a, b, restitution: 0.3, radius: 0, kind: 'wall' });
@@ -207,11 +207,12 @@ export function createTable(world) {
   const flipperMeshes = {};
   for (const def of [
     {
-      side: 'left', pivot: { x: 12, y: 18 }, length: 11, radius: 1.5,
+      // flipper pair sits slightly left of the playfield centre
+      side: 'left', pivot: { x: 9, y: 18 }, length: 11, radius: 1.5,
       restAngle: -28 * D2R, activeAngle: 22 * D2R, slew: 17,
     },
     {
-      side: 'right', pivot: { x: 36, y: 18 }, length: 11, radius: 1.5,
+      side: 'right', pivot: { x: 33, y: 18 }, length: 11, radius: 1.5,
       restAngle: 208 * D2R, activeAngle: 158 * D2R, slew: 17,
     },
   ]) {
