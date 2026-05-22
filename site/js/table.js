@@ -287,12 +287,13 @@ export function createTable(world) {
   }
 
   // --- perimeter chase lights (visual, animated) --------------------------
+  // placed on the edge of the visible 9:16 frame (x 0..54, y 4..100)
   const chase = [];
   const ring = [];
-  for (let x = 8; x <= 46; x += 5) { ring.push({ x, y: 101 }); }
-  for (let y = 96; y >= 24; y -= 7) { ring.push({ x: 1.5, y }); }
-  for (let y = 96; y >= 24; y -= 7) { ring.push({ x: 45.5, y }); }
-  for (let x = 8; x <= 40; x += 5) { ring.push({ x, y: 1.5 }); }
+  for (let x = 3; x <= 51; x += 4) { ring.push({ x, y: 98 }); }    // top
+  for (let y = 92; y >= 12; y -= 7) { ring.push({ x: 1.5, y }); }  // left
+  for (let y = 92; y >= 12; y -= 7) { ring.push({ x: 52.5, y }); } // right
+  for (let x = 3; x <= 51; x += 4) { ring.push({ x, y: 7 }); }     // bottom
   ring.forEach((p) => {
     const dot = new THREE.Mesh(
       new THREE.SphereGeometry(0.9, 12, 10),

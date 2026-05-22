@@ -21,12 +21,11 @@ export function start() {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x02070b);
 
-  const VIEW_HALF = 56;
-  // centred on x=24, the midpoint of the flippers / drain
+  // centred on the table; resize() frames it to fill the screen
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 900);
-  camera.position.set(24, 52, 320);
+  camera.position.set(27, 52, 320);
   camera.up.set(0, 1, 0);
-  camera.lookAt(24, 52, 0);
+  camera.lookAt(27, 52, 0);
 
   scene.add(new THREE.AmbientLight(0x33564a, 0.95));
   const dir = new THREE.DirectionalLight(0x9effc4, 0.85);
@@ -103,7 +102,7 @@ export function start() {
   function launch(power) {
     if (ballPhase !== 'lane') return;
     world.ball.vel.x = (Math.random() * 2 - 1) * 3;
-    world.ball.vel.y = 150 + power * 44;
+    world.ball.vel.y = 220 + power * 90;
     ballPhase = 'play';
     audio.launch();
     table.burst(table.meta.ballStart.x, table.meta.ballStart.y + 4, 18);
@@ -453,10 +452,14 @@ export function start() {
     const h = window.innerHeight;
     renderer.setSize(w, h, false);
     const aspect = w / h;
-    camera.top = VIEW_HALF;
-    camera.bottom = -VIEW_HALF;
-    camera.right = VIEW_HALF * aspect;
-    camera.left = -VIEW_HALF * aspect;
+    // Fill the screen with the table width (54 wide, centred on x=27); the
+    // vertical extent follows the aspect, so on the 9:16 cabinet the table
+    // fills the display edge-to-edge with no border.
+    const HALF_W = 27;
+    camera.left = -HALF_W;
+    camera.right = HALF_W;
+    camera.top = HALF_W / aspect;
+    camera.bottom = -HALF_W / aspect;
     camera.updateProjectionMatrix();
   }
   window.addEventListener('resize', resize);
